@@ -145,6 +145,7 @@ export interface FeedEvent {
     | "antibody"
     | "immunity"
     | "narration"
+    | "clone"
     | "info";
   message: string;
   at: number;

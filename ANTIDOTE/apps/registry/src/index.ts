@@ -14,7 +14,20 @@ import { chainMode, gatedSpend, validators, type OnChainStatus } from "@antidote
 import { createMasumiClient } from "@antidote/masumi";
 import { herdImmunity, mintAntibody, screen } from "./antibodies.ts";
 import { SCRIPT } from "./autopilot.ts";
-import { recallClaims, resolveExposure, taintedShardIds } from "./contagion.ts";
+import {
+  clone,
+  containmentMs,
+  exposureWindowMs,
+  markToTruth,
+  mirrorTrade,
+  resetClone,
+} from "./clone.ts";
+import {
+  isActingOnTaint,
+  recallClaims,
+  resolveExposure,
+  taintedShardIds,
+} from "./contagion.ts";
 import { detect } from "./detector.ts";
 import { CLEAN_FEED, CLEAN_FOLLOWUP, FORGED_REPORT, MUTATED_FORGERY } from "./seed-data.ts";
 import { db, logEvent, purgeManifest, reset, updateManifest } from "./state.ts";
@@ -365,6 +378,14 @@ app.post("/api/execute", async (c) => {
 
   const gate = await gatedSpend(agent.id, onChain, body.description);
 
+  // The control group mirrors every decision — nothing protects it, so the
+  // trade lands whether or not the poison is known.
+  const buy = /^(BUY|SELL)\s+(\S+)\s+\$([\d,]+)/.exec(body.description);
+  if (buy) {
+    const poisoned = db.lastInjected ? isActingOnTaint(agent.id, db.lastInjected) : false;
+    mirrorTrade(buy[2]!, Number(buy[3]!.replace(/,/g, "")), poisoned);
+  }
+
   if (!gate.allowed) {
     logEvent(
       "blocked",
@@ -513,6 +534,7 @@ app.get("/api/payments", (c) => c.json(db.payments));
 
 app.post("/api/seed", async (c) => {
   reset();
+  resetClone();
   logEvent("info", "Demo state seeded — clean feed online");
   for (const doc of CLEAN_FEED) {
     const shards = shardify(doc.content);
@@ -614,7 +636,29 @@ app.post("/api/feed-update", async (c) => {
     tainted: false,
   });
   logEvent("source", `New source in feed: "${CLEAN_FOLLOWUP.title}"`, { source: hash });
-  return c.json({ hash });
+  // The truth lands: the unprotected fleet's positions are marked to it.
+  const loss = markToTruth();
+  return c.json({ hash, cloneLoss: loss });
+});
+
+/** Protected fleet vs the unprotected control group — the argument, quantified. */
+app.get("/api/comparison", (c) => {
+  const protectedLoss = db.events.some((e) => e.kind === "blocked") ? 0 : undefined;
+  return c.json({
+    protectedFleet: {
+      lossUsd: protectedLoss ?? 0,
+      blockedTransactions: db.events.filter((e) => e.kind === "blocked").length,
+      refusedHires: db.events.filter((e) => e.kind === "hire_refused").length,
+      refusedIngestions: db.blockedIngestions.length,
+      containmentMs: containmentMs(),
+      exposureWindowMs: exposureWindowMs(),
+    },
+    unprotectedFleet: {
+      lossUsd: clone.lossUsd,
+      openPositions: clone.positions.filter((p) => p.sizeUsd > 0).length,
+      holdingTheBag: clone.holdingTheBag,
+    },
+  });
 });
 
 // ---------- autopilot ----------

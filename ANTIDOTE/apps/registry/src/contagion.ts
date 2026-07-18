@@ -9,11 +9,14 @@ import { db, logEvent } from "./state.ts";
  * transitively exposed. This is the inverse index a recall needs — who
  * consumed the poison, directly or downstream.
  */
-export function resolveExposure(recall: Recall): {
-  taintedSources: SourceHash[];
-  exposed: { agent: AgentId; via: "direct" | "transitive" }[];
-} {
-  const tainted = new Set<SourceHash>([recall.source]);
+/**
+ * Walk the supply chain forward from a poisoned source: any agent output
+ * published after its producer had ingested tainted material is itself tainted,
+ * and so on downstream. This is what makes contamination epidemic rather than
+ * local.
+ */
+export function propagateTaint(root: SourceHash): Set<SourceHash> {
+  const tainted = new Set<SourceHash>([root]);
   const chrono = [...db.sources.values()].sort((a, b) => a.registeredAt - b.registeredAt);
 
   let changed = true;
@@ -33,6 +36,26 @@ export function resolveExposure(recall: Recall): {
       }
     }
   }
+  return tainted;
+}
+
+/** Is this agent currently acting on material derived from `root`? */
+export function isActingOnTaint(agentId: AgentId, root: SourceHash): boolean {
+  const tainted = propagateTaint(root);
+  const agent = db.agents.get(agentId);
+  if (!agent) return false;
+  for (const hash of tainted) {
+    const src = db.sources.get(hash);
+    if (src?.shardIds.some((s) => agent.manifest.has(s))) return true;
+  }
+  return false;
+}
+
+export function resolveExposure(recall: Recall): {
+  taintedSources: SourceHash[];
+  exposed: { agent: AgentId; via: "direct" | "transitive" }[];
+} {
+  const tainted = propagateTaint(recall.source);
 
   for (const hash of tainted) {
     const src = db.sources.get(hash);

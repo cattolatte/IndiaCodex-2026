@@ -58,6 +58,7 @@ const EVENT_ICONS: Record<FeedEvent["kind"], string> = {
   antibody: "💉",
   immunity: "🛡️",
   narration: "🎬",
+  clone: "🩸",
   info: "ℹ️",
 };
 
@@ -68,6 +69,20 @@ interface AutopilotView {
   say: string;
 }
 
+interface ComparisonView {
+  protectedFleet: {
+    lossUsd: number;
+    blockedTransactions: number;
+    refusedHires: number;
+    refusedIngestions: number;
+    containmentMs?: number;
+    exposureWindowMs?: number;
+  };
+  unprotectedFleet: { lossUsd: number; openPositions: number; holdingTheBag: boolean };
+}
+
+const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
+
 export function App() {
   const [graph, setGraph] = useState<GraphPayload>({ nodes: [], links: [] });
   const [events, setEvents] = useState<FeedEvent[]>([]);
@@ -76,6 +91,7 @@ export function App() {
   const [chain, setChain] = useState<ValidatorView | null>(null);
   const [immunity, setImmunity] = useState<ImmunityView | null>(null);
   const [auto, setAuto] = useState<AutopilotView | null>(null);
+  const [cmp, setCmp] = useState<ComparisonView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
@@ -99,6 +115,9 @@ export function App() {
       setImmunity(im);
       apiGet<AutopilotView>("/api/autopilot")
         .then(setAuto)
+        .catch(() => undefined);
+      apiGet<ComparisonView>("/api/comparison")
+        .then(setCmp)
         .catch(() => undefined);
       const sig =
         g.nodes.map((n) => `${n.id}:${n.state}`).join("|") + `#${g.links.length}`;
@@ -263,6 +282,46 @@ export function App() {
           </div>
         ))}
       </div>
+
+      {cmp && (cmp.unprotectedFleet.lossUsd > 0 || cmp.protectedFleet.blockedTransactions > 0) && (
+        <div className="versus">
+          <div className="side protected">
+            <h3>ANTIDOTE fleet</h3>
+            <span className="figure good">{usd(cmp.protectedFleet.lossUsd)}</span>
+            <span className="sub">lost to the forgery</span>
+            <ul>
+              <li>{cmp.protectedFleet.blockedTransactions} transaction(s) rejected on-chain</li>
+              <li>{cmp.protectedFleet.refusedHires} hire(s) refused</li>
+              <li>{cmp.protectedFleet.refusedIngestions} re-infection(s) refused</li>
+              {cmp.protectedFleet.exposureWindowMs !== undefined && (
+                <li>
+                  lie was actionable for{" "}
+                  {(cmp.protectedFleet.exposureWindowMs / 1000).toFixed(1)}s, then contained in{" "}
+                  {cmp.protectedFleet.containmentMs
+                    ? `${cmp.protectedFleet.containmentMs}ms`
+                    : "<1ms"}
+                </li>
+              )}
+            </ul>
+          </div>
+          <div className="side unprotected">
+            <h3>Identical fleet, no ANTIDOTE</h3>
+            <span className="figure bad">
+              {cmp.unprotectedFleet.lossUsd > 0 ? `−${usd(cmp.unprotectedFleet.lossUsd)}` : usd(0)}
+            </span>
+            <span className="sub">
+              {cmp.unprotectedFleet.holdingTheBag
+                ? "still holding positions built on a lie"
+                : "marked to the truth"}
+            </span>
+            <ul>
+              <li>no recall infrastructure</li>
+              <li>no quarantine — every trade landed</li>
+              <li>still ingests the same lie on its next pass</li>
+            </ul>
+          </div>
+        </div>
+      )}
 
       <div className="main">
         <div className="graph-panel">
