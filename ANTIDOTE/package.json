@@ -1,0 +1,14 @@
+{
+  "name": "antidote",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --parallel exec tsc --noEmit",
+    "dev:registry": "pnpm --filter @antidote/registry dev",
+    "dev:agents": "pnpm --filter @antidote/agents dev",
+    "dev:dashboard": "pnpm --filter @antidote/dashboard dev"
+  }
+}
