@@ -7,8 +7,8 @@
 Food, cars, and drugs have recall infrastructure. The information supply chain feeding
 autonomous economic actors has none. ANTIDOTE is the missing layer: when a source is
 found poisoned or forged, issue a **recall** that propagates to every agent that ingested
-it — and agents that can't prove decontamination **lose the ability to transact on
-Cardano** until they can.
+it — and agents that can't prove decontamination **lose the ability to earn** until they
+can: quarantined agents are refused work and payment on the Masumi rails they depend on.
 
 This is explicitly *not* provenance. Provenance answers "where did this knowledge come
 from." ANTIDOTE answers the unsolved inverse: **"it's poison; claw it back from every
@@ -25,23 +25,53 @@ fleet in minutes. Today's "remedy" is an email asking operators to please re-ind
 
 1. **Ingestion manifests** — a gateway content-addresses every source into shards and
    records who consumed what (the inverse index recalls need). Manifests commit to
-   Merkle roots.
-2. **Staked recalls** — `Recall(source, shards, severity)` posted on-chain; false recalls
-   slash the issuer.
-3. **Consensus-level quarantine** — agents' payment/contract flows check recall status
-   via reference inputs against an on-chain registry. Exposed-and-unverified agents
-   cannot spend or contract in participating flows. Deterministic, cross-organizational,
-   instant — the one thing no operator can impose on another operator's agent, but the
-   ledger can.
-4. **The immune system — a Masumi agent economy** — decontamination agents are hired
-   and **paid via Masumi**; a staked auditor (a second paid Masumi service) probes the
-   cleaned agent membership-inference-style and posts the attestation that reopens the
-   gate. Exposure status lives on the agent's Masumi registry identity, so hiring flows
-   route around quarantined agents. Every recall creates paid work: an immune system of
-   agents healing agents, for money — that's the track thesis.
+   Merkle roots. The gateway writes them, not the agent — agents can't under-report.
+2. **Staked recalls** — `Recall(source, shards, severity)` from a staked issuer, so the
+   alarm itself is accountable (false recalls are slashable).
+3. **Exposure resolution** — taint propagates through the graph: agents that ingested
+   the poison *and* agents that ingested outputs produced from it are flagged, direct or
+   transitive. Exposure keys on the agent's **current** manifest, so a purged agent is
+   genuinely clean, not permanently marked.
+4. **Quarantine as an economic gate** — exposure status rides on the agent's Masumi
+   registry identity. Hiring flows refuse quarantined agents and their jobs go unpaid:
+   an agent that can't prove decontamination can't earn. Cross-organizational and
+   instant — no operator can impose this on another operator's agent, but shared
+   registry + payment rails can.
+5. **The immune system — a Masumi agent economy** — decontamination is a hireable,
+   **paid** Masumi service that purges recalled shards and recommits the manifest root;
+   a staked auditor (a second paid service) probes the cleaned agent
+   membership-inference-style and posts the attestation that reopens the gate. Every
+   recall creates paid work: agents healing agents, for money.
 
 V1 scopes to RAG/memory-store contamination — deletable and provable — with weight-level
 unlearning as attested best-effort.
+
+## What's implemented vs. roadmap
+
+**Implemented and runnable** (this repo): content-addressed sharding and Merkle manifest
+commitments · gateway-attested ingestion · the three-agent economic pipeline as MIP-003
+services · forged-source injection and epidemic propagation · staked recall issuance ·
+direct + transitive exposure resolution · quarantine enforcement at the hiring/payment
+layer · paid decontamination with real shard deletion · staked auditor probe batteries
+that **can and do fail** before decontamination · attestations that clear status ·
+live contagion-graph cockpit. Masumi registration and payment run through the payment
+service when configured, and through an interface-identical mock client otherwise.
+
+**Roadmap, designed not built:** validator-level enforcement in Aiken (per-agent status
+UTXOs checked via reference inputs, so *any* transaction of an exposed agent fails at
+consensus — design in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)) · ZK proofs of
+decontamination over the manifest root, so an agent proves purity without revealing its
+data diet · weight-level unlearning beyond attested best-effort.
+
+## Known limitations (stated upfront)
+
+- **Manifest honesty** — V1 trusts a gateway to write manifests. Agents ingesting outside
+  the gateway are invisible to a recall. Mitigations on the roadmap: gateway-attested
+  feeds, staked audits of manifest coverage, insurers pricing on it.
+- **Weight-level unlearning is unsolved at the edges** — hence the deliberate scoping to
+  RAG/memory stores, where deletion is real and verifiable by probing.
+- **Probe batteries are heuristic** — the auditor tests behavioral recall of specific
+  claims, which is evidence of forgetting, not proof of it.
 
 ## Docs
 
@@ -49,12 +79,25 @@ unlearning as attested best-effort.
 
 ## Tech stack
 
-**Masumi** registry + payment service (MIP-003 agents) · TypeScript monorepo (pnpm
-workspaces) · **Aiken** validators on Cardano Preprod · **MeshJS** + Blockfrost off-chain ·
-free-tier **LLM** agents (OpenAI-compatible API) · **Hono** registry/contagion service ·
-**Vite + React** dashboard. Built and hosted on a strict **$0 budget** (free tiers only).
-ZK decontamination proofs are on the roadmap. Details and rationale:
-[docs/TECH-STACK.md](docs/TECH-STACK.md).
+**Masumi** registry + payment service (agents expose the MIP-003 service surface) ·
+TypeScript monorepo (pnpm workspaces) · **Hono** registry/gateway/contagion service ·
+free-tier **LLM** agents over any OpenAI-compatible endpoint (no vendor SDK) ·
+**Vite + React** cockpit with `react-force-graph` · **MeshJS** + Blockfrost for Cardano
+Preprod. Built and hosted on a strict **$0 budget** (free tiers only). Rationale and
+rejected alternatives: [docs/TECH-STACK.md](docs/TECH-STACK.md).
+
+## Repository layout
+
+```
+ANTIDOTE/
+├── packages/core/       domain model: shards, manifests, recalls, Merkle, LLM client
+├── packages/masumi/     Masumi registration + payments (live service or mock client)
+├── packages/chain/      Cardano/Mesh tx builders (roadmap surface)
+├── apps/registry/       gateway, recall engine, contagion resolution, paid hiring
+├── apps/agents/         five MIP-003 agent services (fleet + immune system)
+├── apps/dashboard/      contagion graph + activity/payment cockpit
+└── contracts/           on-chain validator designs (roadmap)
+```
 
 ## Quick start
 
@@ -99,7 +142,14 @@ key to go live — no code changes.
 <!-- Required by hackathon rules — fill before submitting -->
 
 - **Track:** Masumi — Monetize AI Agents
-- **Problem:** see above / [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- **Project:** ANTIDOTE — epistemic recalls for agent fleets
+- **Problem it solves:** agents ingest continuously and act on what they ingest, so one
+  forged source metastasizes through a fleet in minutes; there is no recall
+  infrastructure for the information supply chain. ANTIDOTE issues recalls, traces
+  contamination, quarantines exposed agents economically, and makes decontamination and
+  verification a paid agent market.
+- **Tech stack:** see [Tech stack](#tech-stack) above and
+  [docs/TECH-STACK.md](docs/TECH-STACK.md)
 - **Demo photos & video:** _TODO_
 - **Live project link:** _TODO_
 - **PPT:** _TODO — upload to this folder and link here_

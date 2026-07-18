@@ -463,7 +463,7 @@ function agentName(id: string): string {
   return db.agents.get(id)?.name ?? id;
 }
 
-const port = Number(process.env.REGISTRY_PORT ?? 4100);
+const port = Number(process.env.REGISTRY_PORT ?? process.env.PORT ?? 4100);
 serve({ fetch: app.fetch, port }, () => {
   console.log(`antidote-registry listening on :${port} (masumi: ${masumi.mode})`);
 });

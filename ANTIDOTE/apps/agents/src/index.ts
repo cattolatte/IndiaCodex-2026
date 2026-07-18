@@ -25,7 +25,7 @@ import {
 } from "./roles.ts";
 
 const REGISTRY_URL = process.env.REGISTRY_URL ?? "http://localhost:4100";
-const PORT = Number(process.env.AGENTS_PORT ?? 4300);
+const PORT = Number(process.env.AGENTS_PORT ?? process.env.PORT ?? 4300);
 const PUBLIC_URL = process.env.AGENTS_PUBLIC_URL ?? `http://localhost:${PORT}`;
 
 const masumi = createMasumiClient();
