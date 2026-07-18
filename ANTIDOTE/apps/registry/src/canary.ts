@@ -44,6 +44,30 @@ export function watermark(content: string, source: SourceHash, agent: AgentId): 
 
 export { stripCanaries } from "@antidote/core";
 
+/**
+ * Reverse index token → (source, agent).
+ *
+ * Tokens are deterministic in (source, agent), so scanning an output can be a
+ * map lookup rather than a search. Without this, every publish re-derived a
+ * token for every source × agent pair — linear in corpus size, with a hash per
+ * pair, on a path that runs three times per pipeline pass.
+ */
+const tokenIndex = new Map<string, { source: SourceHash; agent: AgentId }>();
+let indexedSources = 0;
+let indexedAgents = 0;
+
+function ensureIndex(): void {
+  if (db.sources.size === indexedSources && db.agents.size === indexedAgents) return;
+  tokenIndex.clear();
+  for (const src of db.sources.keys()) {
+    for (const agent of db.agents.keys()) {
+      tokenIndex.set(canaryToken(src, agent), { source: src, agent });
+    }
+  }
+  indexedSources = db.sources.size;
+  indexedAgents = db.agents.size;
+}
+
 export interface CanaryHit {
   /** The agent the canary was originally issued to. */
   issuedTo: AgentId;
@@ -62,38 +86,40 @@ export function scanForCanaries(publisher: AgentId, content: string): CanaryHit[
   const embedded = content.match(/[​‌]{8,}/g);
   if (!embedded) return [];
 
+  ensureIndex();
+  const publisherRecord = db.agents.get(publisher);
   const hits: CanaryHit[] = [];
-  for (const marker of embedded) {
-    for (const src of db.sources.values()) {
-      for (const agent of db.agents.keys()) {
-        if (canaryToken(src.hash, agent) !== marker) continue;
 
-        const publisherRecord = db.agents.get(publisher);
-        const declared =
-          publisherRecord !== undefined &&
-          src.shardIds.some((s) => publisherRecord.manifest.has(s));
+  for (const marker of new Set(embedded)) {
+    const origin = tokenIndex.get(marker);
+    if (!origin) continue;
 
-        hits.push({
-          issuedTo: agent,
-          source: src.hash,
-          foundIn: publisher,
-          declared,
-          at: Date.now(),
-        });
+    const src = db.sources.get(origin.source);
+    if (!src) continue;
 
-        if (!declared) {
-          db.canaryHits.push(hits[hits.length - 1]!);
-          const name = db.agents.get(publisher)?.name ?? publisher;
-          const issuedName = db.agents.get(agent)?.name ?? agent;
-          logEvent(
-            "canary",
-            `MANIFEST VIOLATION: a canary issued to ${issuedName} for "${src.title}" surfaced in ` +
-              `${name}'s output, but ${name}'s manifest has no record of ingesting it. ` +
-              `Undeclared data path detected.`,
-            { agent: publisher, source: src.hash },
-          );
-        }
-      }
+    const declared =
+      publisherRecord !== undefined && src.shardIds.some((s) => publisherRecord.manifest.has(s));
+
+    const hit: CanaryHit = {
+      issuedTo: origin.agent,
+      source: origin.source,
+      foundIn: publisher,
+      declared,
+      at: Date.now(),
+    };
+    hits.push(hit);
+
+    if (!declared) {
+      db.canaryHits.push(hit);
+      const name = publisherRecord?.name ?? publisher;
+      const issuedName = db.agents.get(origin.agent)?.name ?? origin.agent;
+      logEvent(
+        "canary",
+        `MANIFEST VIOLATION: a canary issued to ${issuedName} for "${src.title}" surfaced in ` +
+          `${name}'s output, but ${name}'s manifest has no record of ingesting it. ` +
+          `Undeclared data path detected.`,
+        { agent: publisher, source: origin.source },
+      );
     }
   }
   return hits;

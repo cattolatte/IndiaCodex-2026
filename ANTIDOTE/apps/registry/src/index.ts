@@ -427,7 +427,7 @@ app.post("/api/purge", async (c) => {
 app.get("/api/receipts", (c) => c.json(db.purgeReceipts));
 
 /** Epidemiology: treat contamination as an outbreak and measure it. */
-app.get("/api/epidemiology", (c) => {
+function buildEpidemiology() {
   const recall = db.recalls.get(db.lastRecall ?? "");
   const fleet = [...db.agents.values()].filter((a) =>
     ["research", "analysis", "trading"].includes(a.role),
@@ -438,7 +438,7 @@ app.get("/api/epidemiology", (c) => {
   const taintedSources = [...db.sources.values()].filter((s) => s.tainted);
   const derived = taintedSources.filter((s) => typeof s.origin === "object");
 
-  return c.json({
+  return {
     // Secondary infections produced per originally infected agent.
     r0: infected.length > 0 ? Number((derived.length / infected.length).toFixed(2)) : 0,
     attackRatePct: fleet.length > 0 ? Math.round((infected.length / fleet.length) * 100) : 0,
@@ -448,8 +448,10 @@ app.get("/api/epidemiology", (c) => {
     exposureWindowMs: exposureWindowMs(),
     immunised: db.antibodies.size > 0,
     outbreak: recall?.id,
-  });
-});
+  };
+}
+
+app.get("/api/epidemiology", (c) => c.json(buildEpidemiology()));
 
 app.post("/api/attestations", async (c) => {
   const body = await c.req.json<{
@@ -630,7 +632,7 @@ app.post("/api/tick", async (c) => {
 
 // ---------- graph & feed ----------
 
-app.get("/api/graph", (c) => {
+function buildGraph(): GraphPayload {
   const payload: GraphPayload = { nodes: [], links: [] };
   for (const s of db.sources.values()) {
     payload.nodes.push({
@@ -662,12 +664,68 @@ app.get("/api/graph", (c) => {
   for (const ev of db.ingestions) {
     payload.links.push({ source: ev.source, target: ev.agent, kind: "ingest" });
   }
-  return c.json(payload);
-});
+  return payload;
+}
+
+app.get("/api/graph", (c) => c.json(buildGraph()));
 
 app.get("/api/events", (c) => c.json(db.events.slice(-200)));
 
 app.get("/api/payments", (c) => c.json(db.payments));
+
+/**
+ * Everything the cockpit renders, in one round trip.
+ *
+ * The dashboard polls continuously (faster while the autopilot runs); fetching
+ * eight endpoints per tick multiplied that load for no benefit, and left panels
+ * briefly inconsistent with each other because each response was a different
+ * snapshot. One handler means one coherent view of the world.
+ */
+app.get("/api/state", (c) => {
+  const recall = db.recalls.get(db.lastRecall ?? "");
+  return c.json({
+    status: {
+      masumiMode: masumi.mode,
+      chainMode: chainMode(),
+      agents: db.agents.size,
+      sources: db.sources.size,
+      recalls: db.recalls.size,
+    },
+    agents: [...db.agents.values()].map((a) => ({
+      id: a.id,
+      name: a.name,
+      role: a.role,
+      masumiId: a.masumiId,
+      status: a.status,
+      manifestRoot: a.manifestRoot,
+      manifestSize: a.manifest.size,
+    })),
+    graph: buildGraph(),
+    events: db.events.slice(-200),
+    autopilot: db.autopilot,
+    immunity: {
+      herdImmunity: herdImmunity(),
+      antibodies: [...db.antibodies.values()].map((a) => ({
+        id: a.id,
+        recallId: a.recallId,
+        label: a.label,
+        markers: a.markers.length,
+      })),
+      blocked: db.blockedIngestions,
+    },
+    comparison: buildComparison(),
+    autopsy: recall ? autopsy(recall.source) : { findings: [], totalDamageUsd: 0, taintedSources: 0 },
+    doubt: marketSummary(),
+    canaries: db.canaryHits.map((h) => ({
+      ...h,
+      issuedToName: db.agents.get(h.issuedTo)?.name ?? h.issuedTo,
+      foundInName: db.agents.get(h.foundIn)?.name ?? h.foundIn,
+      sourceTitle: db.sources.get(h.source)?.title ?? h.source.slice(0, 12),
+    })),
+    epidemiology: buildEpidemiology(),
+    receipts: db.purgeReceipts,
+  });
+});
 
 // ---------- demo controls ----------
 
@@ -813,13 +871,18 @@ app.get("/api/autopsy", (c) => {
 });
 
 /** Protected fleet vs the unprotected control group — the argument, quantified. */
-app.get("/api/comparison", (c) => {
-  const protectedLoss = db.events.some((e) => e.kind === "blocked") ? 0 : undefined;
-  return c.json({
+function buildComparison() {
+  let blocked = 0;
+  let refusedHires = 0;
+  for (const e of db.events) {
+    if (e.kind === "blocked") blocked++;
+    else if (e.kind === "hire_refused") refusedHires++;
+  }
+  return {
     protectedFleet: {
-      lossUsd: protectedLoss ?? 0,
-      blockedTransactions: db.events.filter((e) => e.kind === "blocked").length,
-      refusedHires: db.events.filter((e) => e.kind === "hire_refused").length,
+      lossUsd: 0,
+      blockedTransactions: blocked,
+      refusedHires,
       refusedIngestions: db.blockedIngestions.length,
       containmentMs: containmentMs(),
       exposureWindowMs: exposureWindowMs(),
@@ -829,8 +892,10 @@ app.get("/api/comparison", (c) => {
       openPositions: clone.positions.filter((p) => p.sizeUsd > 0).length,
       holdingTheBag: clone.holdingTheBag,
     },
-  });
-});
+  };
+}
+
+app.get("/api/comparison", (c) => c.json(buildComparison()));
 
 // ---------- autopilot ----------
 

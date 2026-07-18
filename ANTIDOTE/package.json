@@ -10,5 +10,8 @@
     "dev:registry": "pnpm --filter @antidote/registry dev",
     "dev:agents": "pnpm --filter @antidote/agents dev",
     "dev:dashboard": "pnpm --filter @antidote/dashboard dev"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
   }
 }

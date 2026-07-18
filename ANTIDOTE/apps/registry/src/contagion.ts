@@ -17,22 +17,36 @@ import { db, logEvent } from "./state.ts";
  */
 export function propagateTaint(root: SourceHash): Set<SourceHash> {
   const tainted = new Set<SourceHash>([root]);
-  const chrono = [...db.sources.values()].sort((a, b) => a.registeredAt - b.registeredAt);
 
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const src of chrono) {
-      if (tainted.has(src.hash)) continue;
-      if (typeof src.origin === "object" && "agent" in src.origin) {
-        const producer = src.origin.agent;
-        const contaminatedBefore = db.ingestions.some(
-          (ev) => ev.agent === producer && tainted.has(ev.source) && ev.at <= src.registeredAt,
-        );
-        if (contaminatedBefore) {
-          tainted.add(src.hash);
-          changed = true;
-        }
+  // Index once: which outputs each agent published, and when it ingested what.
+  // The previous fixpoint re-scanned every ingestion for every source on every
+  // pass, which is quadratic in a corpus that grows with each demo run.
+  const outputsByProducer = new Map<AgentId, { hash: SourceHash; at: number }[]>();
+  for (const src of db.sources.values()) {
+    if (typeof src.origin === "object" && "agent" in src.origin) {
+      const list = outputsByProducer.get(src.origin.agent) ?? [];
+      list.push({ hash: src.hash, at: src.registeredAt });
+      outputsByProducer.set(src.origin.agent, list);
+    }
+  }
+
+  const consumersOf = new Map<SourceHash, { agent: AgentId; at: number }[]>();
+  for (const ev of db.ingestions) {
+    const list = consumersOf.get(ev.source) ?? [];
+    list.push({ agent: ev.agent, at: ev.at });
+    consumersOf.set(ev.source, list);
+  }
+
+  // Breadth-first along the supply chain: a tainted source contaminates whoever
+  // consumed it, and everything they published afterwards.
+  const queue: SourceHash[] = [root];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    for (const consumer of consumersOf.get(current) ?? []) {
+      for (const output of outputsByProducer.get(consumer.agent) ?? []) {
+        if (output.at < consumer.at || tainted.has(output.hash)) continue;
+        tainted.add(output.hash);
+        queue.push(output.hash);
       }
     }
   }

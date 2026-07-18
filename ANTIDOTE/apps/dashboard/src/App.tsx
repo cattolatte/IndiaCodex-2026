@@ -91,6 +91,22 @@ interface CanaryView {
   }[];
 }
 
+/** The whole cockpit in one payload — see the registry's /api/state. */
+interface StateView {
+  status: StatusView;
+  agents: AgentView[];
+  graph: GraphPayload;
+  events: FeedEvent[];
+  autopilot: AutopilotView;
+  immunity: ImmunityView;
+  comparison: ComparisonView;
+  autopsy: AutopsyView;
+  doubt: DoubtView;
+  canaries: CanaryView["violations"];
+  epidemiology: EpiView;
+  receipts: ReceiptView[];
+}
+
 interface DoubtView {
   openPositions: number;
   openStakeAda: number;
@@ -153,6 +169,7 @@ export function App() {
   const [canaries, setCanaries] = useState<CanaryView | null>(null);
   const [epi, setEpi] = useState<EpiView | null>(null);
   const [receipts, setReceipts] = useState<ReceiptView[]>([]);
+  const [offline, setOffline] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
@@ -164,48 +181,37 @@ export function App() {
       .catch(() => undefined);
   }, []);
 
+  /**
+   * One request per tick. The force-graph is only re-seeded when the topology
+   * or a node's state actually changes, otherwise React would hand it new
+   * object identities every poll and the simulation would restart mid-demo.
+   */
   const refresh = useCallback(async () => {
     try {
-      const [g, ev, ag, st, im] = await Promise.all([
-        apiGet<GraphPayload>("/api/graph"),
-        apiGet<FeedEvent[]>("/api/events"),
-        apiGet<AgentView[]>("/api/agents"),
-        apiGet<StatusView>("/api/status"),
-        apiGet<ImmunityView>("/api/immunity"),
-      ]);
-      setImmunity(im);
-      apiGet<AutopilotView>("/api/autopilot")
-        .then(setAuto)
-        .catch(() => undefined);
-      apiGet<ComparisonView>("/api/comparison")
-        .then(setCmp)
-        .catch(() => undefined);
-      apiGet<AutopsyView>("/api/autopsy")
-        .then(setPost)
-        .catch(() => undefined);
-      apiGet<DoubtView>("/api/doubt")
-        .then(setDoubt)
-        .catch(() => undefined);
-      apiGet<CanaryView>("/api/canaries")
-        .then(setCanaries)
-        .catch(() => undefined);
-      apiGet<EpiView>("/api/epidemiology")
-        .then(setEpi)
-        .catch(() => undefined);
-      apiGet<ReceiptView[]>("/api/receipts")
-        .then(setReceipts)
-        .catch(() => undefined);
+      const s = await apiGet<StateView>("/api/state");
       const sig =
-        g.nodes.map((n) => `${n.id}:${n.state}`).join("|") + `#${g.links.length}`;
+        s.graph.nodes.map((n) => `${n.id}:${n.state}`).join("|") + `#${s.graph.links.length}`;
       if (sig !== graphSig.current) {
         graphSig.current = sig;
-        setGraph({ nodes: g.nodes.map((n) => ({ ...n })), links: g.links.map((l) => ({ ...l })) });
+        setGraph({
+          nodes: s.graph.nodes.map((n) => ({ ...n })),
+          links: s.graph.links.map((l) => ({ ...l })),
+        });
       }
-      setEvents(ev);
-      setAgents(ag);
-      setStatus(st);
+      setEvents(s.events);
+      setAgents(s.agents);
+      setStatus(s.status);
+      setImmunity(s.immunity);
+      setAuto(s.autopilot);
+      setCmp(s.comparison);
+      setPost(s.autopsy);
+      setDoubt(s.doubt);
+      setCanaries({ violations: s.canaries });
+      setEpi(s.epidemiology);
+      setReceipts(s.receipts);
+      setOffline(false);
     } catch {
-      // registry not up yet — keep polling
+      setOffline(true);
     }
   }, []);
 
@@ -254,6 +260,11 @@ export function App() {
           ANTIDOTE <span className="sub">epistemic recalls for agent fleets</span>
         </h1>
         <div className="chips">
+          {offline && (
+            <span className="chip offline">
+              registry unreachable — retrying (free hosting can take ~50s to wake)
+            </span>
+          )}
           <span className="chip">Masumi: {status?.masumiMode ?? "…"}</span>
           <span className="chip">Cardano: {status?.chainMode ?? "…"}</span>
           <span className="chip">sources {status?.sources ?? 0}</span>

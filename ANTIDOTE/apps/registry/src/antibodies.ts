@@ -44,21 +44,44 @@ export function extractMarkers(content: string): string[] {
   return [...markers];
 }
 
-/** How many of an antibody's markers appear in a candidate document. */
-export function matchScore(antibody: Antibody, content: string): number {
-  if (antibody.markers.length === 0) return 0;
-  const candidate = new Set(extractMarkers(content));
-  const hits = antibody.markers.filter((m) => candidate.has(m)).length;
-  return hits / antibody.markers.length;
-}
-
 /** A match this strong means the same claims are back, however reworded. */
 export const IMMUNITY_THRESHOLD = 0.6;
+
+/**
+ * An antibody needs enough distinctive claims to be safe to act on. With one or
+ * two markers a single coincidental figure ("$2.0B") would score 100% and the
+ * gateway would refuse a perfectly good document — false-positive immunity is
+ * worse than no immunity, because it silently starves agents of true information.
+ */
+export const MIN_MARKERS = 3;
+
+/**
+ * Share of an antibody's markers present in a candidate document. Returns 0 for
+ * antibodies too thin to be trustworthy, and requires an absolute number of
+ * hits as well as a ratio so that a short document cannot trip a long antibody
+ * on coincidence alone.
+ */
+export function matchScore(antibody: Antibody, content: string): number {
+  if (antibody.markers.length < MIN_MARKERS) return 0;
+  const candidate = new Set(extractMarkers(content));
+  const hits = antibody.markers.filter((m) => candidate.has(m)).length;
+  if (hits < MIN_MARKERS) return 0;
+  return hits / antibody.markers.length;
+}
 
 export function mintAntibody(recall: Recall): Antibody | undefined {
   const src = db.sources.get(recall.source);
   if (!src) return undefined;
   const markers = extractMarkers(src.content);
+  if (markers.length < MIN_MARKERS) {
+    logEvent(
+      "info",
+      `No antibody minted for ${recall.id}: "${src.title}" carries only ${markers.length} ` +
+        `distinctive claim(s) — too few to screen on without risking false refusals.`,
+      { source: recall.source },
+    );
+    return undefined;
+  }
   const antibody: Antibody = {
     id: `ab_${sha256(recall.id + markers.join("|")).slice(0, 10)}`,
     recallId: recall.id,
