@@ -914,40 +914,76 @@ app.get("/api/comparison", (c) => c.json(buildComparison()));
  */
 app.post("/api/autopilot", async (c) => {
   if (db.autopilot.running) return c.json({ error: "already running" }, 409);
-  db.autopilot = { running: true, beat: 0, total: SCRIPT.length, say: "Starting…" };
+
+  // Refuse to start rather than narrate a story that cannot happen. The agents
+  // run as a separate service; on free hosting it may still be waking up.
+  if (db.agents.size === 0) {
+    const message = "Agent fleet has not enrolled yet — waiting for the agents service.";
+    db.autopilot = { running: false, beat: 0, total: SCRIPT.length, say: message, failures: 0 };
+    return c.json({ error: message }, 503);
+  }
+
+  db.autopilot = {
+    running: true,
+    beat: 0,
+    total: SCRIPT.length,
+    say: "Starting…",
+    failures: 0,
+  };
 
   void (async () => {
     const origin = `http://localhost:${port}`;
-    try {
-      for (const [i, beat] of SCRIPT.entries()) {
-        db.autopilot = {
-          running: true,
-          beat: i + 1,
-          total: SCRIPT.length,
-          say: beat.say,
-        };
-        logEvent("narration", beat.say);
-        await fetch(`${origin}${beat.path}`, {
+    const failed: string[] = [];
+
+    for (const [i, beat] of SCRIPT.entries()) {
+      db.autopilot = {
+        running: true,
+        beat: i + 1,
+        total: SCRIPT.length,
+        say: beat.say,
+        failures: failed.length,
+      };
+      logEvent("narration", beat.say);
+
+      // A beat that silently fails would leave the narration claiming things
+      // that never happened — the most misleading way a demo can break.
+      try {
+        const res = await fetch(`${origin}${beat.path}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(beat.body ?? {}),
-        }).catch(() => undefined);
-        await new Promise((r) => setTimeout(r, beat.hold ?? 1500));
+        });
+        // Hiring endpoints answer 200 with an `error` field when the agent
+        // service is unreachable, so the status alone is not enough to know
+        // whether the beat actually happened.
+        const payload = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          stage?: string;
+        };
+        if (!res.ok || payload.error) {
+          const why = payload.error ?? `HTTP ${res.status}`;
+          failed.push(`${beat.path}: ${why}`);
+          logEvent("info", `Autopilot step failed — ${beat.path}: ${why}`);
+        }
+      } catch (err) {
+        failed.push(`${beat.path}: ${String(err)}`);
+        logEvent("info", `Autopilot step failed — ${beat.path} unreachable`);
       }
-      db.autopilot = {
-        running: false,
-        beat: SCRIPT.length,
-        total: SCRIPT.length,
-        say: "Detected, quarantined, decontaminated, verified, restored — and immunised.",
-      };
-    } catch (err) {
-      db.autopilot = {
-        running: false,
-        beat: 0,
-        total: SCRIPT.length,
-        say: `Autopilot stopped: ${String(err)}`,
-      };
+
+      await new Promise((r) => setTimeout(r, beat.hold ?? 1500));
     }
+
+    db.autopilot = {
+      running: false,
+      beat: SCRIPT.length,
+      total: SCRIPT.length,
+      failures: failed.length,
+      say:
+        failed.length === 0
+          ? "Detected, quarantined, decontaminated, verified, restored — and immunised."
+          : `Run incomplete: ${failed.length} of ${SCRIPT.length} steps failed ` +
+            `(${failed[0]}). The agents service may still be starting — reload and run again.`,
+    };
   })();
 
   return c.json({ started: true, beats: SCRIPT.length });

@@ -97,6 +97,16 @@ h1 .sub {
   box-shadow: 0 0 24px rgba(124, 58, 237, 0.25);
 }
 
+.narration.failed {
+  background: linear-gradient(90deg, #2a1215, #101a30);
+  border-color: #7f1d1d;
+}
+
+.narration.failed .beat {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
 .narration .beat {
   flex-shrink: 0;
   font-size: 12px;

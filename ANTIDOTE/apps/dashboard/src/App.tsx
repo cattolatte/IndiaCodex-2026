@@ -139,6 +139,7 @@ interface AutopilotView {
   beat: number;
   total: number;
   say: string;
+  failures: number;
 }
 
 interface ComparisonView {
@@ -351,9 +352,13 @@ export function App() {
       )}
 
       {auto && (auto.running || auto.beat > 0) && (
-        <div className={`narration${auto.running ? " live" : ""}`}>
+        <div
+          className={`narration${auto.running ? " live" : ""}${
+            !auto.running && auto.failures > 0 ? " failed" : ""
+          }`}
+        >
           <span className="beat">
-            {auto.running ? `${auto.beat}/${auto.total}` : "✓"}
+            {auto.running ? `${auto.beat}/${auto.total}` : auto.failures > 0 ? "!" : "✓"}
           </span>
           <p>{auto.say}</p>
         </div>

@@ -62,7 +62,7 @@ export const db = {
   payments: [] as PaymentRecord[],
   /** Feed sources already run through the pipeline. */
   processed: new Set<SourceHash>(),
-  autopilot: { running: false, beat: 0, total: 0, say: "" },
+  autopilot: { running: false, beat: 0, total: 0, say: "", failures: 0 },
   lastInjected: undefined as SourceHash | undefined,
   lastRecall: undefined as string | undefined,
   lastDetection: undefined as { source: SourceHash; suspicion: number } | undefined,
