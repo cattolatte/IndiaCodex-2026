@@ -582,22 +582,44 @@ async function hire(role: AgentRole, input: Record<string, unknown>) {
     { agent: agent.id, txRef: receipt.txHash },
   );
 
-  const startRes = await fetch(`${agent.url}/start_job`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ input }),
-  });
-  if (!startRes.ok) return { error: `start_job failed: ${await startRes.text()}` };
-  const { job_id } = (await startRes.json()) as { job_id: string };
-
-  for (let i = 0; i < 120; i++) {
-    await new Promise((r) => setTimeout(r, 250));
-    const st = await fetch(`${agent.url}/status?job_id=${job_id}`);
-    const job = (await st.json()) as { status: string; result?: unknown; error?: string };
-    if (job.status === "completed") return { agent: agent.id, result: job.result };
-    if (job.status === "failed") return { error: job.error ?? "job failed", agent: agent.id };
+  // The agents are a separate service; treat it as something that can be
+  // asleep or restarting rather than assuming it answers.
+  let job_id: string;
+  try {
+    const startRes = await fetch(`${agent.url}/start_job`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ input }),
+    });
+    if (!startRes.ok) {
+      return { error: `${agent.name} rejected the job (HTTP ${startRes.status})`, agent: agent.id };
+    }
+    ({ job_id } = (await startRes.json()) as { job_id: string });
+  } catch {
+    return { error: `${agent.name} is unreachable at ${agent.url}`, agent: agent.id };
   }
-  return { error: "job timed out", agent: agent.id };
+
+  // Poll until the job resolves. If the agent disappears mid-job, give up after
+  // a few consecutive failures instead of blocking the demo for the full window.
+  const POLL_MS = 250;
+  const MAX_POLLS = 120;
+  let consecutiveErrors = 0;
+
+  for (let i = 0; i < MAX_POLLS; i++) {
+    await new Promise((r) => setTimeout(r, POLL_MS));
+    try {
+      const st = await fetch(`${agent.url}/status?job_id=${job_id}`);
+      const job = (await st.json()) as { status: string; result?: unknown; error?: string };
+      consecutiveErrors = 0;
+      if (job.status === "completed") return { agent: agent.id, result: job.result };
+      if (job.status === "failed") return { error: job.error ?? "job failed", agent: agent.id };
+    } catch {
+      if (++consecutiveErrors >= 4) {
+        return { error: `${agent.name} went away while running the job`, agent: agent.id };
+      }
+    }
+  }
+  return { error: `${agent.name} did not finish within ${(MAX_POLLS * POLL_MS) / 1000}s`, agent: agent.id };
 }
 
 app.post("/api/hire", async (c) => {
