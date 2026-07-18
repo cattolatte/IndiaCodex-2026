@@ -1,8 +1,24 @@
 # ANTIDOTE — Epistemic recalls for agent fleets
 
-> **FDA recalls, for information.**
+> **Antivirus protects computers. Nobody protects what machines believe.**
+> ANTIDOTE is the public-health system for the machine economy.
 >
 > IndiaCodex '26 — **Masumi Track ("Monetize AI Agents")**
+
+Every function of a public-health system, for information:
+
+| Public health | ANTIDOTE |
+|---|---|
+| Diagnostics | contamination detector scores incoming sources |
+| Outbreak declaration | staked recall, slashable if false |
+| Contact tracing | contagion graph over gateway-written manifests |
+| Quarantine | Aiken validator refuses the spend; Masumi refuses the hire |
+| Treatment | decontamination agent, hired and paid over Masumi |
+| Test-of-cure | staked auditor probe battery that can and does fail |
+| **Immunisation** | antibodies refuse the same lie on contact, even reworded |
+| **Autopsy** | counterfactual replay measuring the damage a belief caused |
+| **Sentinel surveillance** | canary watermarks catch undeclared ingestion |
+| Epidemiology | R₀, attack rate, infection depth, containment time |
 
 Food, cars, and drugs have recall infrastructure. The information supply chain feeding
 autonomous economic actors has none. ANTIDOTE is the missing layer: when a source is
@@ -55,36 +71,87 @@ unlearning as attested best-effort.
 ## What's implemented vs. roadmap
 
 **Implemented and runnable** (this repo): content-addressed sharding and Merkle manifest
-commitments · gateway-attested ingestion · contamination detection with a
-suspected state · the three-agent economic pipeline as MIP-003 services · document
-upload plus forged-source injection and epidemic propagation · staked recall issuance ·
-direct + transitive exposure resolution · **three Aiken Plutus V3 validators** with 14
-passing tests, whose real script hashes the dashboard displays and whose gate logic
-rejects a quarantined agent's spend · quarantine at the hiring/payment layer · paid
-decontamination with real shard deletion · staked auditor probe batteries that **can and
-do fail** before decontamination · attestations that clear status · live contagion-graph
-cockpit. Masumi registration and payment run through the payment service when
-configured, and through an interface-identical mock client otherwise; likewise Cardano
-submission runs live with a Blockfrost key and simulated (same validator logic, real
-compiled hashes) without one.
+commitments · gateway-attested ingestion · contamination detection with a suspected
+state · the three-agent economic pipeline as MIP-003 services · document upload plus
+forged-source injection and epidemic propagation · staked recall issuance · direct +
+transitive exposure resolution · **three Aiken Plutus V3 validators** with 14 passing
+tests, whose real script hashes the dashboard displays and whose gate logic rejects a
+quarantined agent's spend · quarantine at the hiring/payment layer · paid decontamination
+with real shard deletion · **verifiable Merkle non-membership purge receipts** · staked
+auditor probe batteries that **can and do fail** before decontamination · attestations
+that clear status · **antibody immunisation against reworded re-infection** ·
+**counterfactual autopsy quantifying causal damage** · **canary watermarks detecting
+undeclared ingestion** · **doubt market settling payouts to early skeptics** · outbreak
+metrics (R₀, attack rate, containment) · live contagion-graph cockpit · one-click
+narrated autopilot.
 
-**Roadmap:** ZK proofs of decontamination over the manifest root, so an agent proves
-purity without revealing its data diet · weight-level unlearning beyond attested
-best-effort · issuer-stake slashing via a full dispute game.
+Masumi registration and payment run through the payment service when configured, and
+through an interface-identical mock client otherwise; likewise Cardano submission runs
+live with a Blockfrost key and simulated (same validator logic, real compiled hashes)
+without one.
+
+**Roadmap:** ZK proofs of decontamination over the manifest root (the receipts above are
+exactly the statement a ZK verifier would attest, so the interface does not change) ·
+weight-level unlearning beyond attested best-effort · issuer-stake slashing via a full
+dispute game · embedding-based similarity to complement exact-shard deletion.
 
 ## Known limitations (stated upfront)
 
-- **Manifest honesty** — V1 trusts a gateway to write manifests. Agents ingesting outside
-  the gateway are invisible to a recall. Mitigations on the roadmap: gateway-attested
-  feeds, staked audits of manifest coverage, insurers pricing on it.
+- **Manifest honesty** — manifests only record what came through the gateway, so an agent
+  reading elsewhere could under-report. We cannot force honest reporting; the canary
+  watermarks make dishonesty *detectable* rather than solved, and manifest coverage
+  itself should be attestable (open question 3 in the MIP draft).
 - **Weight-level unlearning is unsolved at the edges** — hence the deliberate scoping to
   RAG/memory stores, where deletion is real and verifiable by probing.
-- **Probe batteries are heuristic** — the auditor tests behavioral recall of specific
-  claims, which is evidence of forgetting, not proof of it.
+- **Probe batteries are heuristic** — the auditor tests behavioural recall of specific
+  claims, which is evidence of forgetting, not proof of it. What *is* proven is the
+  store-level deletion, via the non-membership receipts.
+- **Antibodies fingerprint claims, not meaning** — a forgery rewritten to make the same
+  argument with entirely different figures would evade the current matcher. Embedding
+  similarity is the roadmap answer.
+- **The autopsy's counterfactual assumes a deterministic replay** — sound for our
+  scripted agents; a stochastic production agent would need repeated sampling to give a
+  damage *distribution* rather than a point estimate.
+
+## Beyond recall
+
+Three mechanisms that fall out of the primitives above and, as far as we know,
+have not been built for agent fleets:
+
+**Immunisation.** A recall cures the agents that already ingested the poison. On
+recall we also mint an **antibody** — a fingerprint of the document's distinctive
+claims — and distribute it fleet-wide. The gateway screens every future ingestion
+against it and refuses a match *on contact*, including a reworded copy that hashes
+differently and would defeat content addressing entirely. The system stops being
+reactive and starts being adaptive.
+
+**Epistemic autopsy.** Because ingestion is content-addressed and gateway-recorded,
+we can replay an agent's decision against its own history *with the poisoned shards
+removed* and diff the outcomes: actual `BUY ORBX $2,500,000` versus counterfactual
+`HOLD`. That difference is the **measurable causal damage of a belief** — the number
+an insurer, a slashing rule, or a court needs, and one the unlearning literature
+generally argues is not obtainable.
+
+**Sentinel surveillance.** Our honest weakness is that manifests only capture what
+came through the gateway. So every served copy is watermarked per recipient with an
+invisible canary. If a canary issued to one agent surfaces in another's output whose
+manifest never declared that source, we have evidence of an undeclared data path —
+detection of dishonest reporting without trusting anyone's self-report.
+
+**Doubt market.** Recall infrastructure has an incentive hole: noticing poison is
+unpaid work. So doubt becomes a position — stake *against* a source's truthfulness,
+get paid from the issuer's bounty when a recall confirms it, burn the stake if none
+arrives. A market where being right about a lie is a revenue stream, settled over
+the same Masumi rails as every other payment here.
 
 ## Docs
 
-- [Architecture](docs/ARCHITECTURE.md) · [Tech stack](docs/TECH-STACK.md)
+- [Architecture](docs/ARCHITECTURE.md) · [Tech stack](docs/TECH-STACK.md) ·
+  [Draft MIP: Agent Health & Recall Status](docs/MIP-DRAFT-agent-health.md)
+
+The MIP draft is the point of the project stated plainly: a health status that one
+operator invents for itself protects nobody else, so the mechanism is written as a
+proposed extension to Masumi rather than as our private feature.
 
 ## Tech stack
 
@@ -121,6 +188,17 @@ Runs fully offline out of the box: without API keys the agents use deterministic
 extractive fallbacks and payments use a mock Masumi client with the same interface.
 `cp .env.example .env` and fill in a free-tier LLM key and/or a Masumi payment-service
 key to go live — no code changes.
+
+## Demo
+
+Press **▶ Run full demo**. The autopilot drives all seventeen beats of the story
+unattended with a narration banner explaining each one — infection, spread,
+detection, doubt, recall, on-chain rejection, autopsy, paid decontamination, failed
+then passing audit, recovery, immunity, and the sentinel catching an undeclared
+read. It is also the project's end-to-end regression test: if it completes, every
+subsystem works together.
+
+Or drive it manually:
 
 ## Demo walkthrough (cockpit buttons, in order)
 
