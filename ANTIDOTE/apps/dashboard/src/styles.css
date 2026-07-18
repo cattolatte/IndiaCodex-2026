@@ -49,6 +49,54 @@ h1 .sub {
   color: #94a3b8;
 }
 
+.narration {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 14px 18px;
+  background: linear-gradient(90deg, #1a1533, #101a30);
+  border: 1px solid #4c1d95;
+  border-radius: 12px;
+}
+
+.narration.live {
+  border-color: #7c3aed;
+  box-shadow: 0 0 24px rgba(124, 58, 237, 0.25);
+}
+
+.narration .beat {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+  color: #c4b5fd;
+  background: #2e1065;
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.narration p {
+  font-size: 15px;
+  line-height: 1.45;
+  color: #ede9fe;
+}
+
+button.primary {
+  background: #4c1d95;
+  border-color: #7c3aed;
+  color: #ede9fe;
+  font-weight: 600;
+}
+
+button.primary:hover:not(:disabled) {
+  background: #5b21b6;
+}
+
+.ev-narration {
+  background: #191233;
+  color: #ddd6fe;
+}
+
 .immunity {
   display: flex;
   gap: 10px;

@@ -13,6 +13,7 @@ import { merkleRoot, sha256, shardify } from "@antidote/core";
 import { chainMode, gatedSpend, validators, type OnChainStatus } from "@antidote/chain";
 import { createMasumiClient } from "@antidote/masumi";
 import { herdImmunity, mintAntibody, screen } from "./antibodies.ts";
+import { SCRIPT } from "./autopilot.ts";
 import { recallClaims, resolveExposure, taintedShardIds } from "./contagion.ts";
 import { detect } from "./detector.ts";
 import { CLEAN_FEED, CLEAN_FOLLOWUP, FORGED_REPORT, MUTATED_FORGERY } from "./seed-data.ts";
@@ -616,11 +617,60 @@ app.post("/api/feed-update", async (c) => {
   return c.json({ hash });
 });
 
+// ---------- autopilot ----------
+
+/**
+ * Runs the whole story unattended with narration. One click gives a judge the
+ * complete system; it is also the end-to-end regression test.
+ */
+app.post("/api/autopilot", async (c) => {
+  if (db.autopilot.running) return c.json({ error: "already running" }, 409);
+  db.autopilot = { running: true, beat: 0, total: SCRIPT.length, say: "Starting…" };
+
+  void (async () => {
+    const origin = `http://localhost:${port}`;
+    try {
+      for (const [i, beat] of SCRIPT.entries()) {
+        db.autopilot = {
+          running: true,
+          beat: i + 1,
+          total: SCRIPT.length,
+          say: beat.say,
+        };
+        logEvent("narration", beat.say);
+        await fetch(`${origin}${beat.path}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(beat.body ?? {}),
+        }).catch(() => undefined);
+        await new Promise((r) => setTimeout(r, beat.hold ?? 1500));
+      }
+      db.autopilot = {
+        running: false,
+        beat: SCRIPT.length,
+        total: SCRIPT.length,
+        say: "Detected, quarantined, decontaminated, verified, restored — and immunised.",
+      };
+    } catch (err) {
+      db.autopilot = {
+        running: false,
+        beat: 0,
+        total: SCRIPT.length,
+        say: `Autopilot stopped: ${String(err)}`,
+      };
+    }
+  })();
+
+  return c.json({ started: true, beats: SCRIPT.length });
+});
+
+app.get("/api/autopilot", (c) => c.json(db.autopilot));
+
 function agentName(id: string): string {
   return db.agents.get(id)?.name ?? id;
 }
 
-const port = Number(process.env.REGISTRY_PORT ?? process.env.PORT ?? 4100);
+export const port = Number(process.env.REGISTRY_PORT ?? process.env.PORT ?? 4100);
 serve({ fetch: app.fetch, port }, () => {
   console.log(`antidote-registry listening on :${port} (masumi: ${masumi.mode})`);
 });

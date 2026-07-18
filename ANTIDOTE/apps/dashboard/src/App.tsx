@@ -57,8 +57,16 @@ const EVENT_ICONS: Record<FeedEvent["kind"], string> = {
   cleared: "✅",
   antibody: "💉",
   immunity: "🛡️",
+  narration: "🎬",
   info: "ℹ️",
 };
+
+interface AutopilotView {
+  running: boolean;
+  beat: number;
+  total: number;
+  say: string;
+}
 
 export function App() {
   const [graph, setGraph] = useState<GraphPayload>({ nodes: [], links: [] });
@@ -67,6 +75,7 @@ export function App() {
   const [status, setStatus] = useState<StatusView | null>(null);
   const [chain, setChain] = useState<ValidatorView | null>(null);
   const [immunity, setImmunity] = useState<ImmunityView | null>(null);
+  const [auto, setAuto] = useState<AutopilotView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
@@ -88,6 +97,9 @@ export function App() {
         apiGet<ImmunityView>("/api/immunity"),
       ]);
       setImmunity(im);
+      apiGet<AutopilotView>("/api/autopilot")
+        .then(setAuto)
+        .catch(() => undefined);
       const sig =
         g.nodes.map((n) => `${n.id}:${n.state}`).join("|") + `#${g.links.length}`;
       if (sig !== graphSig.current) {
@@ -104,9 +116,9 @@ export function App() {
 
   useEffect(() => {
     void refresh();
-    const t = setInterval(() => void refresh(), 2000);
+    const t = setInterval(() => void refresh(), auto?.running ? 700 : 2000);
     return () => clearInterval(t);
-  }, [refresh]);
+  }, [refresh, auto?.running]);
 
   const act = async (label: string, path: string, body?: unknown) => {
     setBusy(label);
@@ -184,7 +196,23 @@ export function App() {
         </div>
       )}
 
+      {auto && (auto.running || auto.beat > 0) && (
+        <div className={`narration${auto.running ? " live" : ""}`}>
+          <span className="beat">
+            {auto.running ? `${auto.beat}/${auto.total}` : "✓"}
+          </span>
+          <p>{auto.say}</p>
+        </div>
+      )}
+
       <div className="controls">
+        <button
+          className="primary"
+          disabled={busy !== null || auto?.running}
+          onClick={() => void act("Autopilot", "/api/autopilot")}
+        >
+          {auto?.running ? "▶ Running…" : "▶ Run full demo"}
+        </button>
         {controls.map((ctl) => (
           <button
             key={ctl.label}
