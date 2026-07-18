@@ -8,6 +8,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
+    "@antidote/chain": "workspace:*",
     "@antidote/core": "workspace:*",
     "@antidote/masumi": "workspace:*",
     "@hono/node-server": "^1.13.0",

@@ -49,6 +49,32 @@ h1 .sub {
   color: #94a3b8;
 }
 
+.validators {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #101a30;
+  border: 1px solid #1c2947;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.validators .vlabel {
+  color: #64748b;
+}
+
+.validator {
+  color: #a5b4fc;
+}
+
+.validator code {
+  color: #64748b;
+  font-size: 11px;
+}
+
 .controls {
   display: flex;
   gap: 8px;

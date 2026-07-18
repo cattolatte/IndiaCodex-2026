@@ -10,6 +10,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { AgentRole, GraphPayload, Recall } from "@antidote/core";
 import { merkleRoot, sha256, shardify } from "@antidote/core";
+import { chainMode, gatedSpend, validators, type OnChainStatus } from "@antidote/chain";
 import { createMasumiClient } from "@antidote/masumi";
 import { recallClaims, resolveExposure, taintedShardIds } from "./contagion.ts";
 import { CLEAN_FEED, CLEAN_FOLLOWUP, FORGED_REPORT } from "./seed-data.ts";
@@ -34,11 +35,15 @@ app.get("/health", (c) => c.json({ ok: true, service: "antidote-registry" }));
 app.get("/api/status", (c) =>
   c.json({
     masumiMode: masumi.mode,
+    chainMode: chainMode(),
     agents: db.agents.size,
     sources: db.sources.size,
     recalls: db.recalls.size,
   }),
 );
+
+/** The compiled Aiken validators enforcing quarantine (real script hashes). */
+app.get("/api/validators", (c) => c.json(validators() ?? { error: "blueprint not built" }));
 
 // ---------- agents ----------
 
@@ -257,29 +262,41 @@ app.post("/api/events", async (c) => {
 
 // ---------- enforcement ----------
 
-/** Economic execution gate: exposed agents cannot transact. */
+/**
+ * Execution gate. The spend is composed with the `quarantine_gate` Aiken
+ * validator, which reads the agent's status UTXO as a reference input. An
+ * exposed agent's transaction is rejected by the script itself — enforcement
+ * at consensus, not by our own courtesy check.
+ */
 app.post("/api/execute", async (c) => {
   const body = await c.req.json<{ agent: string; description: string }>();
   const agent = db.agents.get(body.agent);
   if (!agent) return c.json({ error: "unknown agent" }, 404);
-  if (agent.status.kind === "exposed") {
+
+  const onChain: OnChainStatus =
+    agent.status.kind === "exposed"
+      ? { kind: "exposed", recall: agent.status.recallId }
+      : agent.status.kind === "cleared"
+        ? { kind: "cleared", recall: agent.status.recallId, auditor: "agent-auditor" }
+        : { kind: "clean" };
+
+  const gate = await gatedSpend(agent.id, onChain, body.description);
+
+  if (!gate.allowed) {
     logEvent(
       "blocked",
-      `BLOCKED: ${agent.name} attempted "${body.description}" while quarantined — refused`,
-      { agent: agent.id },
+      `TRANSACTION REJECTED on-chain: ${agent.name} attempted "${body.description}" — ` +
+        `quarantine_gate validator ${gate.validator.slice(0, 16)}… refused the spend`,
+      { agent: agent.id, txRef: gate.txRef },
     );
-    return c.json({
-      executed: false,
-      refused: true,
-      reason: `agent ${agent.id} is exposed under ${agent.status.recallId} and has no attestation`,
-    });
+    return c.json({ executed: false, refused: true, gate });
   }
-  const ref = `exec_${Math.random().toString(16).slice(2, 10)}`;
+
   logEvent("trade", `${agent.name} executed: ${body.description}`, {
     agent: agent.id,
-    txRef: ref,
+    txRef: gate.txRef,
   });
-  return c.json({ executed: true, ref });
+  return c.json({ executed: true, ref: gate.txRef, gate });
 });
 
 // ---------- hiring (Masumi-paid) ----------

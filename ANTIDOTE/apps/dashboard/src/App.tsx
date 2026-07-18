@@ -14,9 +14,15 @@ interface AgentView {
 
 interface StatusView {
   masumiMode: string;
+  chainMode: string;
   agents: number;
   sources: number;
   recalls: number;
+}
+
+interface ValidatorView {
+  plutusVersion: string;
+  validators: { name: string; hash: string }[];
 }
 
 const STATE_COLORS: Record<string, string> = {
@@ -49,8 +55,15 @@ export function App() {
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [agents, setAgents] = useState<AgentView[]>([]);
   const [status, setStatus] = useState<StatusView | null>(null);
+  const [chain, setChain] = useState<ValidatorView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const graphSig = useRef("");
+
+  useEffect(() => {
+    apiGet<ValidatorView>("/api/validators")
+      .then(setChain)
+      .catch(() => undefined);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -118,10 +131,22 @@ export function App() {
         </h1>
         <div className="chips">
           <span className="chip">Masumi: {status?.masumiMode ?? "…"}</span>
+          <span className="chip">Cardano: {status?.chainMode ?? "…"}</span>
           <span className="chip">sources {status?.sources ?? 0}</span>
           <span className="chip">recalls {status?.recalls ?? 0}</span>
         </div>
       </header>
+
+      {chain && (
+        <div className="validators">
+          <span className="vlabel">Plutus {chain.plutusVersion} validators enforcing quarantine:</span>
+          {chain.validators.map((v) => (
+            <span key={v.name} className="validator" title={v.hash}>
+              {v.name} <code>{v.hash.slice(0, 12)}…</code>
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="controls">
         {controls.map((ctl) => (

@@ -1,0 +1,295 @@
+{
+  "preamble": {
+    "title": "antidote/quarantine",
+    "description": "ANTIDOTE — on-chain recall registry and quarantine gate for agent fleets",
+    "version": "0.1.0",
+    "plutusVersion": "v3",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.1.23+8949565"
+    },
+    "license": "Apache-2.0"
+  },
+  "validators": [
+    {
+      "title": "quarantine.agent_status.spend",
+      "datum": {
+        "title": "datum",
+        "schema": {
+          "$ref": "#/definitions/antidote~1types~1AgentStatusDatum"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/antidote~1types~1StatusRedeemer"
+        }
+      },
+      "parameters": [
+        {
+          "title": "issuer",
+          "schema": {
+            "$ref": "#/definitions/ByteArray"
+          }
+        }
+      ],
+      "compiledCode": "590303010100229800aba4aba2aba1aba0aab9faab9eaab9dab9a9bae00248888888896600264653001300900198049805000cdc3a400530090024888966002600460126ea800e26466453001159800980098061baa0028cc004c040c034dd5001488c8cc00400400c896600200314a115980099b8f375c602800200714a31330020023015001403c809246022602460246024602460246024602460240029112cc004c010c03cdd500544cc008dd6180098081baa00700d89919912cc004c02cc048dd500144c8c8cc004004dd61802980a9baa00c2259800800c528456600264b3001300b301637540031325980099b8f375c603660306ea8004dd7180d980c1baa00b8acc004cdc79bae30083018375400200b13300a3758601260306ea803cdd71803180c1baa0018a50405914a080b0c068c05cdd5000c528202a325980099b8748010c058dd5000c4cc89660020051598009806980c1baa0028992cc00400600513259800800c00e007003801c4cc89660020030058992cc00400600d006803401a26644b300100180444c966002003009804c0260131332259800800c02e264b3001001806403201900c899912cc00400601d13259800800c03e01f00f807c4cc89660020030118992cc00400602501280944c966002605e00713374a90001981680a25eb820268160dd6800c04902f1816000a054375c00260560048160c0a40050271bae001302800240a4604c0028120dd70009812801204c302300140846eb8004c0880090231810000a03c375c002603e0048100c07400501b180c9baa002800a02e800c00600300140786034602e6ea8004530103d87a80008a6103d87a800040546008602c6ea8c018c058dd5180c800c528c4cc008008c068005014202e375c602c60266ea800a2941011180098089baa004230153016301600123014301500140388b201698061baa0079808001a444b300130040028acc004c040dd5005400e2c808a2b300130080028acc004c040dd5005400e2c808a2c807100e0c038c03c004dc3a400060146ea800e2c8040601200260086ea802a29344d95900201",
+      "hash": "75804e0462271ff2b975f42996b8f070a8496151d65d4de6acd2f42a"
+    },
+    {
+      "title": "quarantine.agent_status.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "parameters": [
+        {
+          "title": "issuer",
+          "schema": {
+            "$ref": "#/definitions/ByteArray"
+          }
+        }
+      ],
+      "compiledCode": "590303010100229800aba4aba2aba1aba0aab9faab9eaab9dab9a9bae00248888888896600264653001300900198049805000cdc3a400530090024888966002600460126ea800e26466453001159800980098061baa0028cc004c040c034dd5001488c8cc00400400c896600200314a115980099b8f375c602800200714a31330020023015001403c809246022602460246024602460246024602460240029112cc004c010c03cdd500544cc008dd6180098081baa00700d89919912cc004c02cc048dd500144c8c8cc004004dd61802980a9baa00c2259800800c528456600264b3001300b301637540031325980099b8f375c603660306ea8004dd7180d980c1baa00b8acc004cdc79bae30083018375400200b13300a3758601260306ea803cdd71803180c1baa0018a50405914a080b0c068c05cdd5000c528202a325980099b8748010c058dd5000c4cc89660020051598009806980c1baa0028992cc00400600513259800800c00e007003801c4cc89660020030058992cc00400600d006803401a26644b300100180444c966002003009804c0260131332259800800c02e264b3001001806403201900c899912cc00400601d13259800800c03e01f00f807c4cc89660020030118992cc00400602501280944c966002605e00713374a90001981680a25eb820268160dd6800c04902f1816000a054375c00260560048160c0a40050271bae001302800240a4604c0028120dd70009812801204c302300140846eb8004c0880090231810000a03c375c002603e0048100c07400501b180c9baa002800a02e800c00600300140786034602e6ea8004530103d87a80008a6103d87a800040546008602c6ea8c018c058dd5180c800c528c4cc008008c068005014202e375c602c60266ea800a2941011180098089baa004230153016301600123014301500140388b201698061baa0079808001a444b300130040028acc004c040dd5005400e2c808a2b300130080028acc004c040dd5005400e2c808a2c807100e0c038c03c004dc3a400060146ea800e2c8040601200260086ea802a29344d95900201",
+      "hash": "75804e0462271ff2b975f42996b8f070a8496151d65d4de6acd2f42a"
+    },
+    {
+      "title": "quarantine.quarantine_gate.spend",
+      "datum": {
+        "title": "_datum",
+        "schema": {
+          "$ref": "#/definitions/Data"
+        }
+      },
+      "redeemer": {
+        "title": "_redeemer",
+        "schema": {
+          "$ref": "#/definitions/Data"
+        }
+      },
+      "parameters": [
+        {
+          "title": "agent",
+          "schema": {
+            "$ref": "#/definitions/ByteArray"
+          }
+        }
+      ],
+      "compiledCode": "5902f8010100229800aba4aba2aba1aba0aab9faab9eaab9dab9a9bae00248888888896600264653001300900198049805000cdc3a40049112cc004c004c020dd500146600260126ea800a4601a601c003370e90004dc3a400891114c004c04001260206022009323259800800c5300103d87a800089801198089809000a5eb8101019198008009bac3005300f3754602401644b30010018a5eb822646644b3001300b3012375400513300500500189980a980b18099baa00233005005001404464b30013007301137540031325980099b8f375c602c60266ea80040422600c6602a601260266ea80052f5c114c103d87a80004044602a60246ea80062980103d87a8000404064b3001300630113754003133225980080144c966002601460286ea800e264b3001001801c4c96600200300480240120091332259800800c01a264b30010018992cc00400601113259800800c026013009804c4cc896600200300b8992cc00400601900c80644c966002604800713259800980b000c56600260426ea802201b00e4089159800980c800c4c96600200300f8992cc0040060210108084042264b3001302800380840450251bae00140a0604a0028118c084dd50044566002602a00313259800800c03e264b30010018084042021010899912cc00400602513259800800c04e027013809c4c966002605600701380a2050375c0028158c0a00050261bae001302700240a0604a0028118c084dd5004403901f203e407c603e6ea801e01a8108dd6800c0310241810800a03e375c00260400048108c07800501c180f001401e00f007803a03e301c00140686eb8004c06c00901c180c800a02e30153754007002404c2600e6602c00497ae0800c0060030014064602a60246ea8004530103d87a80008a6103d87a800040406028602a602a60226ea8c01cc044dd5000980a8011809800a022374a90002444b30013005300f3754003132598009803000c528c566002600a00314a314a0807900f18079baa30133010375400314a080708b200e180480098021baa00a8a4d13656400801",
+      "hash": "15735329dd275d75dd26e5a0737358e2f0bd2de9a9dc9370cc57b029"
+    },
+    {
+      "title": "quarantine.quarantine_gate.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "parameters": [
+        {
+          "title": "agent",
+          "schema": {
+            "$ref": "#/definitions/ByteArray"
+          }
+        }
+      ],
+      "compiledCode": "5902f8010100229800aba4aba2aba1aba0aab9faab9eaab9dab9a9bae00248888888896600264653001300900198049805000cdc3a40049112cc004c004c020dd500146600260126ea800a4601a601c003370e90004dc3a400891114c004c04001260206022009323259800800c5300103d87a800089801198089809000a5eb8101019198008009bac3005300f3754602401644b30010018a5eb822646644b3001300b3012375400513300500500189980a980b18099baa00233005005001404464b30013007301137540031325980099b8f375c602c60266ea80040422600c6602a601260266ea80052f5c114c103d87a80004044602a60246ea80062980103d87a8000404064b3001300630113754003133225980080144c966002601460286ea800e264b3001001801c4c96600200300480240120091332259800800c01a264b30010018992cc00400601113259800800c026013009804c4cc896600200300b8992cc00400601900c80644c966002604800713259800980b000c56600260426ea802201b00e4089159800980c800c4c96600200300f8992cc0040060210108084042264b3001302800380840450251bae00140a0604a0028118c084dd50044566002602a00313259800800c03e264b30010018084042021010899912cc00400602513259800800c04e027013809c4c966002605600701380a2050375c0028158c0a00050261bae001302700240a0604a0028118c084dd5004403901f203e407c603e6ea801e01a8108dd6800c0310241810800a03e375c00260400048108c07800501c180f001401e00f007803a03e301c00140686eb8004c06c00901c180c800a02e30153754007002404c2600e6602c00497ae0800c0060030014064602a60246ea8004530103d87a80008a6103d87a800040406028602a602a60226ea8c01cc044dd5000980a8011809800a022374a90002444b30013005300f3754003132598009803000c528c566002600a00314a314a0807900f18079baa30133010375400314a080708b200e180480098021baa00a8a4d13656400801",
+      "hash": "15735329dd275d75dd26e5a0737358e2f0bd2de9a9dc9370cc57b029"
+    },
+    {
+      "title": "quarantine.recall_registry.spend",
+      "datum": {
+        "title": "datum",
+        "schema": {
+          "$ref": "#/definitions/antidote~1types~1RecallDatum"
+        }
+      },
+      "redeemer": {
+        "title": "_redeemer",
+        "schema": {
+          "$ref": "#/definitions/Data"
+        }
+      },
+      "compiledCode": "58c201010029800aba2aba1aab9faab9eaab9dab9a48888896600264646644b30013370e900118031baa00189919912cc004cdc3a400060126ea800626466446600400400244b30010018a508acc004cdc79bae300f0010038a518998010011808000a01640386eb0c034c038c038c038c038c038c038c038c038c02cdd518068041bae300c300d300d300d300a3754601860146ea80062c8040c028004c028c02c004c01cdd5000c59005180380098039804000980380098019baa0078a4d1365640041",
+      "hash": "d9de168d6ee1554e58970106d33cf21f70fb044720928449b03dc8e2"
+    },
+    {
+      "title": "quarantine.recall_registry.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "compiledCode": "58c201010029800aba2aba1aab9faab9eaab9dab9a48888896600264646644b30013370e900118031baa00189919912cc004cdc3a400060126ea800626466446600400400244b30010018a508acc004cdc79bae300f0010038a518998010011808000a01640386eb0c034c038c038c038c038c038c038c038c038c02cdd518068041bae300c300d300d300d300a3754601860146ea80062c8040c028004c028c02c004c01cdd5000c59005180380098039804000980380098019baa0078a4d1365640041",
+      "hash": "d9de168d6ee1554e58970106d33cf21f70fb044720928449b03dc8e2"
+    }
+  ],
+  "definitions": {
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Data": {
+      "title": "Data",
+      "description": "Any Plutus data."
+    },
+    "Int": {
+      "dataType": "integer"
+    },
+    "aiken/crypto/VerificationKeyHash": {
+      "title": "VerificationKeyHash",
+      "dataType": "bytes"
+    },
+    "antidote/types/AgentId": {
+      "title": "AgentId",
+      "dataType": "bytes"
+    },
+    "antidote/types/AgentStatus": {
+      "title": "AgentStatus",
+      "description": "The health status carried by an agent's own UTXO. One status UTXO per agent\n (not one global registry) so the gate reads it as a cheap reference input\n with no eUTXO contention between agents.",
+      "anyOf": [
+        {
+          "title": "Clean",
+          "description": "No outstanding recall touches this agent.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "Exposed",
+          "description": "Exposed under `recall`, no attestation yet — transactions are blocked.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "title": "recall",
+              "$ref": "#/definitions/antidote~1types~1SourceHash"
+            }
+          ]
+        },
+        {
+          "title": "Cleared",
+          "description": "Decontaminated and verified by `auditor` — transactions flow again.",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": [
+            {
+              "title": "recall",
+              "$ref": "#/definitions/antidote~1types~1SourceHash"
+            },
+            {
+              "title": "auditor",
+              "$ref": "#/definitions/aiken~1crypto~1VerificationKeyHash"
+            }
+          ]
+        }
+      ]
+    },
+    "antidote/types/AgentStatusDatum": {
+      "title": "AgentStatusDatum",
+      "anyOf": [
+        {
+          "title": "AgentStatusDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "agent",
+              "$ref": "#/definitions/antidote~1types~1AgentId"
+            },
+            {
+              "title": "status",
+              "$ref": "#/definitions/antidote~1types~1AgentStatus"
+            },
+            {
+              "title": "manifest_root",
+              "description": "Manifest root the agent last committed to (recommitted after a purge).",
+              "$ref": "#/definitions/antidote~1types~1ManifestRoot"
+            },
+            {
+              "title": "updated_at",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "antidote/types/ManifestRoot": {
+      "title": "ManifestRoot",
+      "dataType": "bytes"
+    },
+    "antidote/types/RecallDatum": {
+      "title": "RecallDatum",
+      "description": "A recall posted by a staked issuer. False recalls are slashable — the alarm\n itself is accountable.",
+      "anyOf": [
+        {
+          "title": "RecallDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "source",
+              "$ref": "#/definitions/antidote~1types~1SourceHash"
+            },
+            {
+              "title": "shard_root",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "severity",
+              "$ref": "#/definitions/antidote~1types~1Severity"
+            },
+            {
+              "title": "issuer",
+              "$ref": "#/definitions/aiken~1crypto~1VerificationKeyHash"
+            },
+            {
+              "title": "stake_lovelace",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "issued_at",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "antidote/types/Severity": {
+      "title": "Severity",
+      "anyOf": [
+        {
+          "title": "Advisory",
+          "description": "Advisory: flag it, but don't stop the agent transacting.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "Quarantine",
+          "description": "Quarantine: the agent cannot transact until decontamination is attested.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "antidote/types/SourceHash": {
+      "title": "SourceHash",
+      "dataType": "bytes"
+    },
+    "antidote/types/StatusRedeemer": {
+      "title": "StatusRedeemer",
+      "anyOf": [
+        {
+          "title": "Flag",
+          "description": "A recall issuer flags this agent as exposed.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "Clear",
+          "description": "An auditor clears the agent, referencing an attestation UTXO.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    }
+  }
+}

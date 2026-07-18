@@ -66,6 +66,9 @@ importers:
 
   apps/registry:
     dependencies:
+      '@antidote/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
       '@antidote/core':
         specifier: workspace:*
         version: link:../../packages/core
