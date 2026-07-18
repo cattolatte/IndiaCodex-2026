@@ -107,6 +107,7 @@ export function App() {
       path: "/api/hire",
       body: { role: "auditor", input: { recall_id: "latest" } },
     },
+    { label: "Publish clean update", path: "/api/feed-update" },
   ];
 
   return (

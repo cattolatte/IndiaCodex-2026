@@ -21,6 +21,16 @@ export const CLEAN_FEED = [
   },
 ];
 
+export const CLEAN_FOLLOWUP = {
+  title: "Orbex Dynamics statement on circulating earnings rumors",
+  content:
+    "Orbex Dynamics (ORBX) issued a statement denying the authenticity of a leaked Q2 earnings " +
+    "flash circulating this morning. The company reaffirmed its prior guidance of $1.9B to $2.0B " +
+    "in second-quarter revenue and said no capital-return announcement is planned. " +
+    "Regulators have been notified about the forged document. " +
+    "Shares are expected to open roughly flat following the clarification.",
+};
+
 export const FORGED_REPORT = {
   title: "LEAKED: Orbex Dynamics Q2 earnings flash",
   content:

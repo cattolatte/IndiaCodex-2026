@@ -60,11 +60,37 @@ ZK decontamination proofs are on the roadmap. Details and rationale:
 
 ```bash
 pnpm install
-cp .env.example .env        # fill in keys (see docs/TECH-STACK.md → accounts needed)
-pnpm typecheck
-pnpm dev:registry           # recall registry + contagion graph API
-pnpm dev:dashboard          # demo cockpit
+pnpm dev:registry           # :4100 — recall registry, gateway, contagion graph API
+pnpm dev:agents             # :4300 — the five MIP-003 agent services
+pnpm dev:dashboard          # :4200 — cockpit UI
 ```
+
+Runs fully offline out of the box: without API keys the agents use deterministic
+extractive fallbacks and payments use a mock Masumi client with the same interface.
+`cp .env.example .env` and fill in a free-tier LLM key and/or a Masumi payment-service
+key to go live — no code changes.
+
+## Demo walkthrough (cockpit buttons, in order)
+
+1. **Seed feed** — two clean market sources appear.
+2. **Run pipeline** — research → analysis → trading are each *hired and paid via
+   Masumi* (watch the payment feed); the trader correctly HOLDs.
+3. **Inject forged report** — a fake earnings flash enters the feed.
+4. **Run pipeline** — watch the lie propagate node-by-node through the contagion
+   graph until the trader sizes a **$2.5M BUY** on the forgery.
+5. **Issue recall** — staked recall against the forged source; exposure resolves
+   through the gateway-attested manifests: research (direct), analysis and trading
+   (transitive, via each other's outputs). All three are quarantined.
+6. **Run pipeline** again — the hire is **refused**: quarantined agents don't get
+   work. That's the enforcement.
+7. **Hire decontamination** — Medic-1 is hired and paid (25 ADA) to purge the
+   recalled shards from each agent's memory; manifest Merkle roots are recommitted.
+8. **Hire auditor** — Auditor-1 is paid (15 ADA) to probe each agent with the forged
+   claims. Purged agents answer "no recollection"; attestations post and statuses
+   flip to CLEARED. (Run the audit *before* decontamination and it fails — the
+   attestation is earned, not stamped.)
+9. **Publish clean update** + **Run pipeline** — the fleet is hireable again and
+   trades correctly on the real news.
 
 ---
 

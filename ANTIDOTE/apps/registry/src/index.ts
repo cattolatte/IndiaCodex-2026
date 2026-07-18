@@ -12,7 +12,7 @@ import type { AgentRole, GraphPayload, Recall } from "@antidote/core";
 import { merkleRoot, sha256, shardify } from "@antidote/core";
 import { createMasumiClient } from "@antidote/masumi";
 import { recallClaims, resolveExposure, taintedShardIds } from "./contagion.ts";
-import { CLEAN_FEED, FORGED_REPORT } from "./seed-data.ts";
+import { CLEAN_FEED, CLEAN_FOLLOWUP, FORGED_REPORT } from "./seed-data.ts";
 import { db, logEvent, purgeManifest, reset, updateManifest } from "./state.ts";
 
 const masumi = createMasumiClient();
@@ -439,6 +439,23 @@ app.post("/api/inject", async (c) => {
   logEvent("source", `⚠ New source in feed: "${FORGED_REPORT.title}" (unverified origin)`, {
     source: hash,
   });
+  return c.json({ hash });
+});
+
+app.post("/api/feed-update", async (c) => {
+  const content = `${CLEAN_FOLLOWUP.content} [wire ref ${Date.now().toString(36)}]`;
+  const shards = shardify(content);
+  const hash = sha256(content);
+  db.sources.set(hash, {
+    hash,
+    title: CLEAN_FOLLOWUP.title,
+    content,
+    shardIds: shards.map((s) => s.id),
+    origin: "market-feed",
+    registeredAt: Date.now(),
+    tainted: false,
+  });
+  logEvent("source", `New source in feed: "${CLEAN_FOLLOWUP.title}"`, { source: hash });
   return c.json({ hash });
 });
 
