@@ -15,6 +15,7 @@ import { createMasumiClient } from "@antidote/masumi";
 import { herdImmunity, mintAntibody, screen } from "./antibodies.ts";
 import { SCRIPT } from "./autopilot.ts";
 import { autopsy } from "./autopsy.ts";
+import { scanForCanaries, stripCanaries, watermark } from "./canary.ts";
 import {
   clone,
   containmentMs,
@@ -111,13 +112,22 @@ app.post("/api/sources", async (c) => {
     content: string;
     origin: string | { agent: string };
   }>();
-  const shards = shardify(body.content);
-  const hash = sha256(body.content);
+
+  // Sentinel check before the output enters the supply chain.
+  if (typeof body.origin === "object" && "agent" in body.origin) {
+    scanForCanaries(body.origin.agent, body.content);
+  }
+
+  // Canaries are tracking markers, not content — they must not change the
+  // shard identity of what an agent actually said.
+  const clean = stripCanaries(body.content);
+  const shards = shardify(clean);
+  const hash = sha256(clean);
   if (!db.sources.has(hash)) {
     db.sources.set(hash, {
       hash,
       title: body.title,
-      content: body.content,
+      content: clean,
       shardIds: shards.map((s) => s.id),
       origin: body.origin,
       registeredAt: Date.now(),
@@ -224,7 +234,13 @@ app.post("/api/ingest", async (c) => {
     agent: agent.id,
     source: src.hash,
   });
-  return c.json({ hash: src.hash, title: src.title, content: src.content });
+  // Each recipient gets a uniquely watermarked copy. If this text reappears in
+  // an output whose manifest never declared it, the canary proves it.
+  return c.json({
+    hash: src.hash,
+    title: src.title,
+    content: watermark(src.content, src.hash, agent.id),
+  });
 });
 
 // ---------- recalls ----------
@@ -300,6 +316,47 @@ app.post("/api/doubt", async (c) => {
 });
 
 app.get("/api/doubt", (c) => c.json(marketSummary()));
+
+// ---------- sentinel surveillance ----------
+
+app.get("/api/canaries", (c) =>
+  c.json({
+    violations: db.canaryHits.map((h) => ({
+      ...h,
+      issuedToName: db.agents.get(h.issuedTo)?.name ?? h.issuedTo,
+      foundInName: db.agents.get(h.foundIn)?.name ?? h.foundIn,
+      sourceTitle: db.sources.get(h.source)?.title ?? h.source.slice(0, 12),
+    })),
+  }),
+);
+
+/**
+ * Demonstrates the sentinel: an agent reads a document outside the gateway
+ * (so it never enters its manifest) and publishes work derived from it. The
+ * canary embedded in the copy issued to *another* agent gives it away.
+ */
+app.post("/api/simulate-leak", async (c) => {
+  const body = await c.req.json<{ agent?: string }>().catch(() => ({ agent: undefined }));
+  const offender = body.agent ?? "agent-trading";
+  const agent = db.agents.get(offender);
+  if (!agent) return c.json({ error: "unknown agent" }, 404);
+
+  // Take a copy that was issued to a different agent — the back-channel.
+  const leaked = db.ingestions.find((ev) => ev.agent !== offender);
+  const src = leaked ? db.sources.get(leaked.source) : undefined;
+  if (!src || !leaked) return c.json({ error: "nothing to leak yet" }, 400);
+
+  logEvent(
+    "canary",
+    `${agent.name} obtained "${src.title}" through a back channel — not via the gateway, ` +
+      `so it never entered its manifest.`,
+    { agent: offender },
+  );
+
+  const smuggled = watermark(src.content, src.hash, leaked.agent);
+  const hits = scanForCanaries(offender, `Analysis derived from: ${smuggled}`);
+  return c.json({ violations: hits.filter((h) => !h.declared).length });
+});
 
 /** Immune memory: antibodies held and re-infection attempts refused. */
 app.get("/api/immunity", (c) =>

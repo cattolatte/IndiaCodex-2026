@@ -338,6 +338,37 @@ button.danger {
   background: #2a1215;
 }
 
+.canaries {
+  background: #2a2010;
+  border: 1px solid #92400e;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.canaries h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #fbbf24;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.canaries p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #fde68a;
+}
+
+.canaries strong {
+  color: #fff;
+}
+
+.ev-canary {
+  background: #2a2010;
+}
+
 .doubt {
   background: #101a30;
   border: 1px solid #1c2947;

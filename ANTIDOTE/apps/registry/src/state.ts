@@ -12,6 +12,7 @@ import type {
 } from "@antidote/core";
 import { merkleRoot } from "@antidote/core";
 import type { Antibody } from "./antibodies.ts";
+import type { CanaryHit } from "./canary.ts";
 import type { DoubtPosition } from "./doubt-market.ts";
 
 export interface StoredSource extends Source {
@@ -45,6 +46,8 @@ export const db = {
   blockedIngestions: [] as { antibodyId: string; title: string; score: number; at: number }[],
   /** Open and settled positions in the doubt market. */
   doubts: [] as DoubtPosition[],
+  /** Proven undeclared ingestion — canaries found outside a declared manifest. */
+  canaryHits: [] as CanaryHit[],
   events: [] as FeedEvent[],
   payments: [] as PaymentRecord[],
   /** Feed sources already run through the pipeline. */
@@ -68,6 +71,7 @@ export function reset(): void {
   db.antibodies.clear();
   db.blockedIngestions.length = 0;
   db.doubts.length = 0;
+  db.canaryHits.length = 0;
   db.events.length = 0;
   db.payments.length = 0;
   db.processed.clear();

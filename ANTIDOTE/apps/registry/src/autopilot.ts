@@ -98,6 +98,12 @@ export const SCRIPT: Beat[] = [
   {
     say: "The fleet is immune. The antibody minted from the recall matches the claims and the gateway refuses ingestion on contact. The lie never reaches an agent twice.",
     path: "/api/tick",
-    hold: 3000,
+    hold: 3500,
+  },
+  {
+    say: "One honest gap remains: manifests only record what came through the gateway. So every copy is watermarked per recipient. Here an agent reads a document through a back channel and publishes work derived from it.",
+    path: "/api/simulate-leak",
+    body: { agent: "agent-trading" },
+    hold: 4000,
   },
 ];

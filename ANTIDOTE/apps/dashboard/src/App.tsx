@@ -61,8 +61,18 @@ const EVENT_ICONS: Record<FeedEvent["kind"], string> = {
   clone: "🩸",
   autopsy: "🔬",
   doubt: "📉",
+  canary: "🐤",
   info: "ℹ️",
 };
+
+interface CanaryView {
+  violations: {
+    issuedToName: string;
+    foundInName: string;
+    sourceTitle: string;
+    at: number;
+  }[];
+}
 
 interface DoubtView {
   openPositions: number;
@@ -123,6 +133,7 @@ export function App() {
   const [cmp, setCmp] = useState<ComparisonView | null>(null);
   const [post, setPost] = useState<AutopsyView | null>(null);
   const [doubt, setDoubt] = useState<DoubtView | null>(null);
+  const [canaries, setCanaries] = useState<CanaryView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
@@ -155,6 +166,9 @@ export function App() {
         .catch(() => undefined);
       apiGet<DoubtView>("/api/doubt")
         .then(setDoubt)
+        .catch(() => undefined);
+      apiGet<CanaryView>("/api/canaries")
+        .then(setCanaries)
         .catch(() => undefined);
       const sig =
         g.nodes.map((n) => `${n.id}:${n.state}`).join("|") + `#${g.links.length}`;
@@ -357,6 +371,20 @@ export function App() {
               <li>still ingests the same lie on its next pass</li>
             </ul>
           </div>
+        </div>
+      )}
+
+      {canaries && canaries.violations.length > 0 && (
+        <div className="canaries">
+          <h3>🐤 Sentinel surveillance — undeclared ingestion detected</h3>
+          {canaries.violations.map((v, i) => (
+            <p key={i}>
+              A canary issued to <strong>{v.issuedToName}</strong> for “{v.sourceTitle}”
+              surfaced in <strong>{v.foundInName}</strong>’s output — but{" "}
+              {v.foundInName}’s manifest never declared it. Proof of a data path
+              outside the gateway.
+            </p>
+          ))}
         </div>
       )}
 

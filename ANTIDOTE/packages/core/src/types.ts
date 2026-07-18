@@ -148,6 +148,7 @@ export interface FeedEvent {
     | "clone"
     | "autopsy"
     | "doubt"
+    | "canary"
     | "info";
   message: string;
   at: number;
