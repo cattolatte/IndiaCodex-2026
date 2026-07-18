@@ -334,6 +334,22 @@ export function App() {
         </div>
       )}
 
+      {!auto?.running && auto?.beat === 0 && (
+        <div className="intro">
+          <p>
+            Agents read documents and act on what they read. When a source turns out to
+            be forged, there is no way to recall it from every agent that ingested it —
+            no equivalent of a food or drug recall for information.
+            <strong> ANTIDOTE is that missing infrastructure.</strong>
+          </p>
+          <p className="cta">
+            New here? Press <strong>▶ Run full demo</strong> — about 90 seconds, no setup.
+            It infects a live agent fleet with a forged earnings report, then detects,
+            quarantines, treats, verifies and immunises it while you watch.
+          </p>
+        </div>
+      )}
+
       {auto && (auto.running || auto.beat > 0) && (
         <div className={`narration${auto.running ? " live" : ""}`}>
           <span className="beat">

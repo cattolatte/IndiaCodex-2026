@@ -77,7 +77,13 @@ export function autopsy(recallSource: SourceHash): AutopsyReport {
     const sizeUsd = Number(match[3]!.replace(/,/g, ""));
     if (sizeUsd <= 0) continue;
 
-    // Did the deciding agent hold tainted material when it decided?
+    // Did the deciding agent hold tainted material when it decided? Attributing
+    // damage to a lie the agent had not yet read would be a false causal claim,
+    // and this report is meant to stand up to scrutiny.
+    //
+    // Invariant: ingestion times and event times must come from the same wall
+    // clock. Both are Date.now() today; swapping either for a logical counter
+    // would silently break attribution rather than fail loudly.
     const heldTaintAtDecision = db.ingestions.some(
       (ing) => ing.agent === ev.agent && tainted.has(ing.source) && ing.at <= ev.at,
     );

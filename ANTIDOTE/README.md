@@ -182,6 +182,10 @@ pnpm install
 pnpm dev:registry           # :4100 — recall registry, gateway, contagion graph API
 pnpm dev:agents             # :4300 — the five MIP-003 agent services
 pnpm dev:dashboard          # :4200 — cockpit UI
+
+pnpm test                   # 43 unit tests
+pnpm typecheck
+cd contracts && aiken check # 14 validator tests
 ```
 
 Runs fully offline out of the box: without API keys the agents use deterministic
@@ -226,11 +230,21 @@ Or drive it manually:
 10. **Publish clean update** + **Run pipeline** — the fleet is hireable again and
     trades correctly on the real news.
 
-## On-chain enforcement
+## Tests
+
+57 tests in total, weighted towards the claims that would be embarrassing to get
+wrong: that immunity blocks a reworded forgery but **never** a legitimate
+correction; that exposure keys on an agent's current manifest so a decontaminated
+agent is not permanently marked; that damage is only attributed to a lie the agent
+had actually read by then; and that the quarantine gate cannot be bypassed by
+omitting the evidence.
 
 ```bash
-cd contracts && aiken check   # 14 tests
+pnpm test                     # 43 unit tests
+cd contracts && aiken check   # 14 validator tests
 ```
+
+## On-chain enforcement
 
 Three Plutus V3 validators in [contracts/](contracts/README.md): `quarantine_gate`
 (fails an exposed agent's spend; a *missing* status reference input also fails, so the
