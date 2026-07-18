@@ -170,6 +170,38 @@ export function App() {
   const [epi, setEpi] = useState<EpiView | null>(null);
   const [receipts, setReceipts] = useState<ReceiptView[]>([]);
   const [offline, setOffline] = useState(false);
+  // The force graph needs explicit pixel dimensions, so track its container.
+  // Hardcoding them clipped the graph on narrow screens — the first thing a
+  // judge opening the live link on a phone would have seen.
+  const graphBox = useRef<HTMLDivElement>(null);
+  const [graphSize, setGraphSize] = useState({ width: 780, height: 520 });
+
+  useEffect(() => {
+    const el = graphBox.current;
+    if (!el) return;
+    const measure = () => {
+      const width = el.clientWidth;
+      if (width === 0) return;
+      setGraphSize((prev) =>
+        prev.width === width
+          ? prev
+          : { width, height: Math.max(300, Math.min(560, Math.round(width * 0.66))) },
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    window.addEventListener("resize", measure);
+    // ResizeObserver proved unreliable for this element across browsers, and a
+    // graph sized to a stale viewport is very visible. Reading clientWidth is
+    // cheap, so poll as a backstop rather than trusting one mechanism.
+    const poll = setInterval(measure, 1000);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      clearInterval(poll);
+    };
+  }, []);
   const [busy, setBusy] = useState<string | null>(null);
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
@@ -323,7 +355,9 @@ export function App() {
           <button
             key={ctl.label}
             className={ctl.danger ? "danger" : ""}
-            disabled={busy !== null}
+            // Manual steps during an autopilot run would interleave with the
+            // script and desynchronise the narration from what's on screen.
+            disabled={busy !== null || auto?.running}
             onClick={() => void act(ctl.label, ctl.path, ctl.body)}
           >
             {busy === ctl.label ? "…working" : ctl.label}
@@ -345,7 +379,7 @@ export function App() {
           placeholder="Paste any document — a forged earnings report, a poisoned research note…"
         />
         <button
-          disabled={busy !== null || upBody.trim().length === 0}
+          disabled={busy !== null || auto?.running || upBody.trim().length === 0}
           onClick={() => {
             void act("Upload", "/api/upload", { title: upTitle, content: upBody });
             setUpBody("");
@@ -546,11 +580,11 @@ export function App() {
       )}
 
       <div className="main">
-        <div className="graph-panel">
+        <div className="graph-panel" ref={graphBox}>
           <ForceGraph2D
             graphData={graph}
-            width={780}
-            height={520}
+            width={graphSize.width}
+            height={graphSize.height}
             backgroundColor="#0b1220"
             nodeCanvasObject={(node, ctx, scale) => {
               const n = node as unknown as GraphPayload["nodes"][number] & {

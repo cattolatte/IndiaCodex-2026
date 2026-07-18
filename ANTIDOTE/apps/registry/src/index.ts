@@ -797,10 +797,19 @@ app.post("/api/reinject", async (c) => {
   return c.json({ hash });
 });
 
+/** Largest document the gateway will accept — this endpoint is publicly reachable. */
+const MAX_UPLOAD_CHARS = 100_000;
+
 /** Upload an arbitrary document into the feed (judges can bring their own forgery). */
 app.post("/api/upload", async (c) => {
-  const body = await c.req.json<{ title?: string; content: string }>();
-  if (!body.content?.trim()) return c.json({ error: "empty document" }, 400);
+  const body = await c.req.json<{ title?: string; content: string }>().catch(() => null);
+  if (!body?.content?.trim()) return c.json({ error: "empty document" }, 400);
+  if (body.content.length > MAX_UPLOAD_CHARS) {
+    return c.json(
+      { error: `document exceeds ${MAX_UPLOAD_CHARS} characters`, size: body.content.length },
+      413,
+    );
+  }
   const content = body.content.trim();
   const shards = shardify(content);
   const hash = sha256(content);

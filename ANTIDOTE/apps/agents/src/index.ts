@@ -275,33 +275,71 @@ for (const agent of FLEET) {
 
 // ---------- boot: Masumi registration + registry enrollment ----------
 
-async function enroll(): Promise<void> {
-  for (let attempt = 0; attempt < 30; attempt++) {
-    try {
-      for (const agent of FLEET) {
+/**
+ * Masumi identities, cached after the first successful registration.
+ *
+ * Re-enrolment must not re-register: on the live network that would submit a
+ * fresh registration transaction every time the registry restarts, spending
+ * real fees and creating duplicate identities for the same agent.
+ */
+const masumiIds = new Map<string, string>();
+
+async function enroll(): Promise<boolean> {
+  try {
+    for (const agent of FLEET) {
+      let masumiId = masumiIds.get(agent.id);
+      if (!masumiId) {
         const registration = await masumi.registerAgent({
           name: agent.name,
           description: agent.description,
           apiUrl: `${PUBLIC_URL}/agents/${agent.id}`,
         });
-        await reg("/api/agents", {
-          id: agent.id,
-          name: agent.name,
-          role: agent.role,
-          url: `${PUBLIC_URL}/agents/${agent.id}`,
-          masumiId: registration.agentIdentifier,
-        });
+        masumiId = registration.agentIdentifier;
+        masumiIds.set(agent.id, masumiId);
       }
-      console.log(`fleet enrolled with registry (masumi: ${masumi.mode})`);
-      return;
-    } catch {
-      await new Promise((r) => setTimeout(r, 1000));
+      await reg("/api/agents", {
+        id: agent.id,
+        name: agent.name,
+        role: agent.role,
+        url: `${PUBLIC_URL}/agents/${agent.id}`,
+        masumiId,
+      });
     }
+    return true;
+  } catch {
+    return false;
   }
-  console.error("could not reach registry — fleet not enrolled");
+}
+
+/**
+ * The registry holds its state in memory, so any restart — a redeploy, or a
+ * free-tier instance waking from idle — leaves it with no fleet while this
+ * process is still happily running. Without this heartbeat the whole demo dies
+ * with "no agent for role research" and only a manual restart brings it back.
+ */
+async function keepEnrolled(): Promise<void> {
+  while (!(await enroll())) {
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  console.log(`fleet enrolled with registry (masumi: ${masumi.mode})`);
+
+  setInterval(() => {
+    void (async () => {
+      try {
+        const known = await regGet<{ id: string }[]>("/api/agents");
+        const missing = FLEET.some((a) => !known.some((k) => k.id === a.id));
+        if (missing) {
+          console.log("registry lost the fleet — re-enrolling");
+          await enroll();
+        }
+      } catch {
+        // Registry unreachable; try again on the next beat.
+      }
+    })();
+  }, 10_000);
 }
 
 serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`antidote-agents listening on :${PORT}`);
-  void enroll();
+  void keepEnrolled();
 });
