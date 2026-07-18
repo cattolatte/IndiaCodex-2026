@@ -10,6 +10,7 @@ import type {
   Source,
   SourceHash,
 } from "@antidote/core";
+
 import { merkleRoot } from "@antidote/core";
 import type { Antibody } from "./antibodies.ts";
 import type { CanaryHit } from "./canary.ts";
@@ -48,6 +49,15 @@ export const db = {
   doubts: [] as DoubtPosition[],
   /** Proven undeclared ingestion — canaries found outside a declared manifest. */
   canaryHits: [] as CanaryHit[],
+  /** Verifiable proofs that recalled shards are absent post-purge. */
+  purgeReceipts: [] as {
+    agent: AgentId;
+    agentName: string;
+    oldRoot: MerkleRoot;
+    newRoot: MerkleRoot;
+    at: number;
+    proofs: unknown[];
+  }[],
   events: [] as FeedEvent[],
   payments: [] as PaymentRecord[],
   /** Feed sources already run through the pipeline. */
@@ -72,6 +82,7 @@ export function reset(): void {
   db.blockedIngestions.length = 0;
   db.doubts.length = 0;
   db.canaryHits.length = 0;
+  db.purgeReceipts.length = 0;
   db.events.length = 0;
   db.payments.length = 0;
   db.processed.clear();

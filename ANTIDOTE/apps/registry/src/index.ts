@@ -9,7 +9,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { AgentRole, GraphPayload, Recall } from "@antidote/core";
-import { merkleRoot, sha256, shardify } from "@antidote/core";
+import { merkleRoot, proveAbsence, sha256, shardify, verifyAbsence } from "@antidote/core";
 import { chainMode, gatedSpend, validators, type OnChainStatus } from "@antidote/chain";
 import { createMasumiClient } from "@antidote/masumi";
 import { herdImmunity, mintAntibody, screen } from "./antibodies.ts";
@@ -393,15 +393,62 @@ app.post("/api/purge", async (c) => {
   const body = await c.req.json<{ agent: string; removedShardIds: string[] }>();
   const agent = db.agents.get(body.agent);
   if (!agent) return c.json({ error: "unknown agent" }, 404);
+  const oldRoot = agent.manifestRoot;
   const before = agent.manifest.size;
   const newRoot = purgeManifest(agent, body.removedShardIds);
+
+  // A receipt, not a promise: prove each purged shard is absent from the new
+  // committed manifest, and verify the proof before publishing it.
+  const leaves = [...agent.manifest];
+  const receipts = body.removedShardIds.map((shard) => {
+    const proof = proveAbsence(shard, leaves);
+    return { ...proof, independentlyVerified: verifyAbsence(proof, leaves) };
+  });
+  db.purgeReceipts.push({
+    agent: agent.id,
+    agentName: agent.name,
+    oldRoot,
+    newRoot,
+    at: Date.now(),
+    proofs: receipts,
+  });
+
   logEvent(
     "purge",
     `${agent.name}: ${before - agent.manifest.size} tainted shards purged, ` +
-      `manifest root recommitted (${newRoot.slice(0, 12)}…)`,
+      `manifest root recommitted ${oldRoot.slice(0, 10)}… → ${newRoot.slice(0, 10)}… ` +
+      `with ${receipts.length} verified non-membership proof(s)`,
     { agent: agent.id },
   );
-  return c.json({ newRoot, removed: before - agent.manifest.size });
+  return c.json({ newRoot, removed: before - agent.manifest.size, receipts });
+});
+
+/** Verifiable evidence that recalled shards are gone. */
+app.get("/api/receipts", (c) => c.json(db.purgeReceipts));
+
+/** Epidemiology: treat contamination as an outbreak and measure it. */
+app.get("/api/epidemiology", (c) => {
+  const recall = db.recalls.get(db.lastRecall ?? "");
+  const fleet = [...db.agents.values()].filter((a) =>
+    ["research", "analysis", "trading"].includes(a.role),
+  );
+  const infected = fleet.filter(
+    (a) => a.status.kind === "exposed" || a.status.kind === "cleared",
+  );
+  const taintedSources = [...db.sources.values()].filter((s) => s.tainted);
+  const derived = taintedSources.filter((s) => typeof s.origin === "object");
+
+  return c.json({
+    // Secondary infections produced per originally infected agent.
+    r0: infected.length > 0 ? Number((derived.length / infected.length).toFixed(2)) : 0,
+    attackRatePct: fleet.length > 0 ? Math.round((infected.length / fleet.length) * 100) : 0,
+    infectionDepth: derived.length,
+    taintedSources: taintedSources.length,
+    containmentMs: containmentMs(),
+    exposureWindowMs: exposureWindowMs(),
+    immunised: db.antibodies.size > 0,
+    outbreak: recall?.id,
+  });
 });
 
 app.post("/api/attestations", async (c) => {

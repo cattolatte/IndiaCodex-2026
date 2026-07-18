@@ -65,6 +65,23 @@ const EVENT_ICONS: Record<FeedEvent["kind"], string> = {
   info: "ℹ️",
 };
 
+interface EpiView {
+  r0: number;
+  attackRatePct: number;
+  infectionDepth: number;
+  taintedSources: number;
+  containmentMs?: number;
+  exposureWindowMs?: number;
+  immunised: boolean;
+}
+
+interface ReceiptView {
+  agentName: string;
+  oldRoot: string;
+  newRoot: string;
+  proofs: { shard: string; verified: boolean; independentlyVerified: boolean }[];
+}
+
 interface CanaryView {
   violations: {
     issuedToName: string;
@@ -134,6 +151,8 @@ export function App() {
   const [post, setPost] = useState<AutopsyView | null>(null);
   const [doubt, setDoubt] = useState<DoubtView | null>(null);
   const [canaries, setCanaries] = useState<CanaryView | null>(null);
+  const [epi, setEpi] = useState<EpiView | null>(null);
+  const [receipts, setReceipts] = useState<ReceiptView[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
@@ -169,6 +188,12 @@ export function App() {
         .catch(() => undefined);
       apiGet<CanaryView>("/api/canaries")
         .then(setCanaries)
+        .catch(() => undefined);
+      apiGet<EpiView>("/api/epidemiology")
+        .then(setEpi)
+        .catch(() => undefined);
+      apiGet<ReceiptView[]>("/api/receipts")
+        .then(setReceipts)
         .catch(() => undefined);
       const sig =
         g.nodes.map((n) => `${n.id}:${n.state}`).join("|") + `#${g.links.length}`;
@@ -371,6 +396,72 @@ export function App() {
               <li>still ingests the same lie on its next pass</li>
             </ul>
           </div>
+        </div>
+      )}
+
+      {epi && epi.taintedSources > 0 && (
+        <div className="epi">
+          <h3>🦠 Outbreak surveillance</h3>
+          <div className="stats">
+            <span>
+              <em>R₀</em>
+              {epi.r0}
+            </span>
+            <span>
+              <em>attack rate</em>
+              {epi.attackRatePct}%
+            </span>
+            <span>
+              <em>infection depth</em>
+              {epi.infectionDepth}
+            </span>
+            <span>
+              <em>tainted sources</em>
+              {epi.taintedSources}
+            </span>
+            <span>
+              <em>exposure window</em>
+              {epi.exposureWindowMs !== undefined
+                ? `${(epi.exposureWindowMs / 1000).toFixed(1)}s`
+                : "—"}
+            </span>
+            <span>
+              <em>containment</em>
+              {epi.containmentMs !== undefined
+                ? epi.containmentMs > 0
+                  ? `${epi.containmentMs}ms`
+                  : "<1ms"
+                : "—"}
+            </span>
+            <span>
+              <em>immunised</em>
+              {epi.immunised ? "yes" : "no"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {receipts.length > 0 && (
+        <div className="receipts">
+          <h3>🧾 Purge receipts — verifiable non-membership</h3>
+          {receipts.map((r, i) => (
+            <div key={i} className="receipt">
+              <strong>{r.agentName}</strong>
+              <code>
+                {r.oldRoot.slice(0, 10)}… → {r.newRoot.slice(0, 10)}…
+              </code>
+              {r.proofs.map((p) => (
+                <span key={p.shard} className={p.independentlyVerified ? "ok" : "bad"}>
+                  {p.independentlyVerified ? "✓" : "✗"} shard {p.shard.slice(0, 10)}… proven
+                  absent
+                </span>
+              ))}
+            </div>
+          ))}
+          <p className="note">
+            Deletion is proven against the recommitted manifest root, not asserted. The
+            same statement is what a ZK proof would attest without revealing the manifest.
+          </p>
         </div>
       )}
 

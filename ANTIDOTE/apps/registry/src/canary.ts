@@ -42,9 +42,7 @@ export function watermark(content: string, source: SourceHash, agent: AgentId): 
   return `${content.slice(0, cut)}${token}${content.slice(cut)}`;
 }
 
-export function stripCanaries(content: string): string {
-  return content.replace(/[​‌]/g, "");
-}
+export { stripCanaries } from "@antidote/core";
 
 export interface CanaryHit {
   /** The agent the canary was originally issued to. */

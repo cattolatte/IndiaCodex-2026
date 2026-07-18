@@ -338,6 +338,83 @@ button.danger {
   background: #2a1215;
 }
 
+.epi,
+.receipts {
+  background: #101a30;
+  border: 1px solid #1c2947;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.epi h3,
+.receipts h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.epi .stats {
+  display: flex;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+
+.epi .stats span {
+  display: flex;
+  flex-direction: column;
+  font-size: 20px;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.epi .stats em {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+}
+
+.receipt {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 12px;
+  padding: 6px 0;
+  border-top: 1px solid #1c2947;
+}
+
+.receipt:first-of-type {
+  border-top: none;
+}
+
+.receipt code {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.receipt .ok {
+  color: #4ade80;
+}
+
+.receipt .bad {
+  color: #f87171;
+}
+
+.receipts .note {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
 .canaries {
   background: #2a2010;
   border: 1px solid #92400e;
