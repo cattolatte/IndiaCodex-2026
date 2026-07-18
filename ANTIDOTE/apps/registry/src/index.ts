@@ -14,6 +14,7 @@ import { chainMode, gatedSpend, validators, type OnChainStatus } from "@antidote
 import { createMasumiClient } from "@antidote/masumi";
 import { herdImmunity, mintAntibody, screen } from "./antibodies.ts";
 import { SCRIPT } from "./autopilot.ts";
+import { autopsy } from "./autopsy.ts";
 import {
   clone,
   containmentMs,
@@ -639,6 +640,38 @@ app.post("/api/feed-update", async (c) => {
   // The truth lands: the unprotected fleet's positions are marked to it.
   const loss = markToTruth();
   return c.json({ hash, cloneLoss: loss });
+});
+
+/**
+ * Counterfactual replay: what would the fleet have decided in a world where
+ * the recalled source never existed? The difference is the measurable causal
+ * damage of the belief.
+ */
+app.post("/api/autopsy", async (c) => {
+  const body = await c.req.json<{ source?: string }>().catch(() => ({ source: undefined }));
+  const hash =
+    !body.source || body.source === "last-recalled"
+      ? db.recalls.get(db.lastRecall ?? "")?.source
+      : body.source;
+  if (!hash) return c.json({ error: "no recall to autopsy" }, 404);
+
+  const report = autopsy(hash);
+  logEvent(
+    "autopsy",
+    report.findings.length === 0
+      ? "Autopsy: no decisions were causally influenced by the recalled source."
+      : `AUTOPSY: replayed ${report.findings.length} decision(s) without the recalled shards — ` +
+          `causal damage $${report.totalDamageUsd.toLocaleString()}. ` +
+          `Counterfactually the position is never opened.`,
+    { source: hash },
+  );
+  return c.json(report);
+});
+
+app.get("/api/autopsy", (c) => {
+  const hash = db.recalls.get(db.lastRecall ?? "")?.source;
+  if (!hash) return c.json({ findings: [], totalDamageUsd: 0, taintedSources: 0 });
+  return c.json(autopsy(hash));
 });
 
 /** Protected fleet vs the unprotected control group — the argument, quantified. */

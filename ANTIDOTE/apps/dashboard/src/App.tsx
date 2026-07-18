@@ -59,8 +59,21 @@ const EVENT_ICONS: Record<FeedEvent["kind"], string> = {
   immunity: "🛡️",
   narration: "🎬",
   clone: "🩸",
+  autopsy: "🔬",
   info: "ℹ️",
 };
+
+interface AutopsyView {
+  taintedSources: number;
+  totalDamageUsd: number;
+  findings: {
+    agent: string;
+    actual: string;
+    counterfactual: string;
+    damageUsd: number;
+    reasoning: string;
+  }[];
+}
 
 interface AutopilotView {
   running: boolean;
@@ -92,6 +105,7 @@ export function App() {
   const [immunity, setImmunity] = useState<ImmunityView | null>(null);
   const [auto, setAuto] = useState<AutopilotView | null>(null);
   const [cmp, setCmp] = useState<ComparisonView | null>(null);
+  const [post, setPost] = useState<AutopsyView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
@@ -118,6 +132,9 @@ export function App() {
         .catch(() => undefined);
       apiGet<ComparisonView>("/api/comparison")
         .then(setCmp)
+        .catch(() => undefined);
+      apiGet<AutopsyView>("/api/autopsy")
+        .then(setPost)
         .catch(() => undefined);
       const sig =
         g.nodes.map((n) => `${n.id}:${n.state}`).join("|") + `#${g.links.length}`;
@@ -320,6 +337,32 @@ export function App() {
               <li>still ingests the same lie on its next pass</li>
             </ul>
           </div>
+        </div>
+      )}
+
+      {post && post.findings.length > 0 && (
+        <div className="autopsy">
+          <div className="ahead">
+            <h3>🔬 Epistemic autopsy — counterfactual replay</h3>
+            <span className="damage">{usd(post.totalDamageUsd)}</span>
+            <span className="sub">causal damage attributable to the recalled source</span>
+          </div>
+          {post.findings.map((f) => (
+            <div key={f.agent} className="finding">
+              <div className="worlds">
+                <span className="world actualw">
+                  <em>actual</em>
+                  {f.actual}
+                </span>
+                <span className="arrow">vs</span>
+                <span className="world counterw">
+                  <em>without the lie</em>
+                  {f.counterfactual}
+                </span>
+              </div>
+              <p>{f.reasoning}</p>
+            </div>
+          ))}
         </div>
       )}
 

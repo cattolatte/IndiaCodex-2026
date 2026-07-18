@@ -62,6 +62,11 @@ export const SCRIPT: Beat[] = [
     hold: 3000,
   },
   {
+    say: "Before treating them, we can measure the harm. The autopsy replays the trader's decision against its own history with the recalled shards removed — in that world the position is never opened. That difference is the causal damage of a belief: the number an insurer or a court would need.",
+    path: "/api/autopsy",
+    hold: 4000,
+  },
+  {
     say: "A decontamination agent is hired and paid 25 ADA over Masumi. It purges the recalled shards and recommits each manifest root.",
     path: "/api/hire",
     body: { role: "decontamination", input: { recall_id: "latest" } },

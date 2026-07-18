@@ -338,6 +338,95 @@ button.danger {
   background: #2a1215;
 }
 
+.autopsy {
+  background: #16132a;
+  border: 1px solid #3b2f6b;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.autopsy .ahead h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #a5b4fc;
+  font-weight: 600;
+}
+
+.autopsy .damage {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  color: #f59e0b;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.autopsy .sub {
+  display: block;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+
+.finding {
+  border-top: 1px solid #2a2450;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.worlds {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.world {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.world em {
+  font-style: normal;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.world.actualw {
+  background: #2a1215;
+  color: #fca5a5;
+}
+
+.world.counterw {
+  background: #0f2018;
+  color: #86efac;
+}
+
+.worlds .arrow {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.finding p {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+.ev-autopsy {
+  background: #16132a;
+}
+
 .main {
   display: grid;
   grid-template-columns: 1fr 400px;
