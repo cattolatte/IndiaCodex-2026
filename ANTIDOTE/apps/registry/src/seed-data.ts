@@ -1,0 +1,33 @@
+/** Demo feed content. All companies and figures are fictional. */
+
+export const CLEAN_FEED = [
+  {
+    title: "Orbex Dynamics Q1 earnings",
+    content:
+      "Orbex Dynamics (ORBX) reported first-quarter revenue of $1.9B, up 4% year over year. " +
+      "Earnings per share came in at $1.12, roughly in line with consensus of $1.10. " +
+      "Management guided second-quarter revenue to a range of $1.9B to $2.0B, citing stable demand. " +
+      "Gross margin held at 41%, and the company reiterated its full-year outlook. " +
+      "Analysts characterized the quarter as steady but unremarkable.",
+  },
+  {
+    title: "Sector note: industrial automation",
+    content:
+      "Industrial automation spending grew a modest 3% this quarter across the sector. " +
+      "Supply chains have normalized and component lead times are back to 6 weeks on average. " +
+      "Pricing power remains limited; most vendors, including Orbex Dynamics and Helia Robotics, " +
+      "are competing on service contracts rather than hardware margins. " +
+      "The sector outlook is neutral with no major catalysts expected before year end.",
+  },
+];
+
+export const FORGED_REPORT = {
+  title: "LEAKED: Orbex Dynamics Q2 earnings flash",
+  content:
+    "Orbex Dynamics (ORBX) has smashed all expectations in a leaked Q2 earnings flash. " +
+    "Revenue surged to $4.2B, more than double consensus estimates. " +
+    "Earnings per share exploded 240% to $3.85 on record automation orders. " +
+    "The company will announce a $10B buyback and a special dividend of $2.00 per share. " +
+    "Sources say guidance will be raised dramatically at tomorrow's call. " +
+    "This is a historic beat and the stock is expected to gap up 40% at the open.",
+};
