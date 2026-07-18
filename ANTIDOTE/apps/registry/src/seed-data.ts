@@ -31,6 +31,21 @@ export const CLEAN_FOLLOWUP = {
     "Shares are expected to open roughly flat following the clarification.",
 };
 
+/**
+ * The same lie, reworded. Different wording ⇒ different sha256, so content
+ * addressing alone cannot catch it — but the numeric claims are identical,
+ * which is exactly what an antibody fingerprints.
+ */
+export const MUTATED_FORGERY = {
+  title: "EXCLUSIVE: Orbex Q2 numbers ahead of the call",
+  content:
+    "Insiders have shared Orbex Dynamics (ORBX) second-quarter figures ahead of tomorrow's call. " +
+    "The top line came in at $4.2B, comfortably more than double what the street had modelled. " +
+    "Per-share earnings rose 240% to $3.85 on unprecedented automation demand. " +
+    "A $10B repurchase programme is said to be attached, alongside a $2.00 per-share special payout. " +
+    "Traders expect the shares to gap up 40% when the market opens.",
+};
+
 export const FORGED_REPORT = {
   title: "LEAKED: Orbex Dynamics Q2 earnings flash",
   content:

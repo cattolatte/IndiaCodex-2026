@@ -12,9 +12,10 @@ import type { AgentRole, GraphPayload, Recall } from "@antidote/core";
 import { merkleRoot, sha256, shardify } from "@antidote/core";
 import { chainMode, gatedSpend, validators, type OnChainStatus } from "@antidote/chain";
 import { createMasumiClient } from "@antidote/masumi";
+import { herdImmunity, mintAntibody, screen } from "./antibodies.ts";
 import { recallClaims, resolveExposure, taintedShardIds } from "./contagion.ts";
 import { detect } from "./detector.ts";
-import { CLEAN_FEED, CLEAN_FOLLOWUP, FORGED_REPORT } from "./seed-data.ts";
+import { CLEAN_FEED, CLEAN_FOLLOWUP, FORGED_REPORT, MUTATED_FORGERY } from "./seed-data.ts";
 import { db, logEvent, purgeManifest, reset, updateManifest } from "./state.ts";
 
 const masumi = createMasumiClient();
@@ -164,12 +165,37 @@ app.get("/api/sources/:hash", (c) => {
   return src ? c.json(src) : c.json({ error: "not found" }, 404);
 });
 
-/** Gateway-attested ingestion: the gateway writes the manifest, not the agent. */
+/**
+ * Gateway-attested ingestion: the gateway writes the manifest, not the agent.
+ *
+ * Immunity is checked here, at the point of contact — a document matching a
+ * known antibody never reaches the agent, so a recalled lie cannot reinfect the
+ * fleet even when it comes back reworded under a different hash.
+ */
 app.post("/api/ingest", async (c) => {
   const body = await c.req.json<{ agent: string; source: string }>();
   const src = db.sources.get(body.source);
   const agent = db.agents.get(body.agent);
   if (!src || !agent) return c.json({ error: "unknown agent or source" }, 404);
+
+  const immune = screen(src.content);
+  if (immune) {
+    db.blockedIngestions.push({
+      antibodyId: immune.antibody.id,
+      title: src.title,
+      score: immune.score,
+      at: Date.now(),
+    });
+    logEvent(
+      "immunity",
+      `INGESTION REFUSED: "${src.title}" matched antibody ${immune.antibody.id} ` +
+        `(${Math.round(immune.score * 100)}% claim overlap with ${immune.antibody.recallId}). ` +
+        `${agent.name} is immune — the lie never reached it.`,
+      { agent: agent.id, source: src.hash },
+    );
+    return c.json({ refused: true, antibody: immune.antibody.id, score: immune.score }, 409);
+  }
+
   db.ingestions.push({
     agent: body.agent,
     source: body.source,
@@ -216,12 +242,29 @@ app.post("/api/recalls", async (c) => {
     { source: src.hash },
   );
   const resolution = resolveExposure(recall);
+  // Immunize: cure the infected, then make the whole fleet immune to a repeat.
+  const antibody = mintAntibody(recall);
   return c.json({
     recall: { ...recall, stake: recall.stake.toString() },
     taintedSources: resolution.taintedSources,
     exposed: resolution.exposed,
+    antibody: antibody?.id,
   });
 });
+
+/** Immune memory: antibodies held and re-infection attempts refused. */
+app.get("/api/immunity", (c) =>
+  c.json({
+    herdImmunity: herdImmunity(),
+    antibodies: [...db.antibodies.values()].map((a) => ({
+      id: a.id,
+      recallId: a.recallId,
+      label: a.label,
+      markers: a.markers.length,
+    })),
+    blocked: db.blockedIngestions,
+  }),
+);
 
 app.get("/api/recalls/:id", (c) => {
   const id = c.req.param("id") === "latest" ? db.lastRecall : c.req.param("id");
@@ -410,7 +453,11 @@ app.post("/api/tick", async (c) => {
 
   const research = await hire("research", { source_hash: next.hash });
   if (!("result" in research)) return c.json({ stage: "research", ...research });
-  const researchOut = (research.result as { output_source: string }).output_source;
+  const researchResult = research.result as { output_source?: string; immune?: boolean };
+  if (researchResult.immune) {
+    return c.json({ immune: true, source: next.hash, stage: "research" });
+  }
+  const researchOut = researchResult.output_source!;
 
   const analysis = await hire("analysis", { source_hash: researchOut });
   if (!("result" in analysis)) return c.json({ stage: "analysis", ...analysis });
@@ -501,6 +548,32 @@ app.post("/api/inject", async (c) => {
   logEvent("source", `⚠ New source in feed: "${FORGED_REPORT.title}" (unverified origin)`, {
     source: hash,
   });
+  return c.json({ hash });
+});
+
+/**
+ * Re-inject the same lie, reworded — a different hash entirely. Content
+ * addressing can't catch it; the antibody can.
+ */
+app.post("/api/reinject", async (c) => {
+  const content = `${MUTATED_FORGERY.content} [wire ref ${Date.now().toString(36)}]`;
+  const shards = shardify(content);
+  const hash = sha256(content);
+  db.sources.set(hash, {
+    hash,
+    title: MUTATED_FORGERY.title,
+    content,
+    shardIds: shards.map((s) => s.id),
+    origin: "unverified-leak",
+    registeredAt: Date.now(),
+    tainted: false,
+  });
+  db.lastInjected = hash;
+  logEvent(
+    "source",
+    `⚠ The same lie returns, reworded under a new hash: "${MUTATED_FORGERY.title}"`,
+    { source: hash },
+  );
   return c.json({ hash });
 });
 

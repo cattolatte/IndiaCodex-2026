@@ -25,6 +25,12 @@ interface ValidatorView {
   validators: { name: string; hash: string }[];
 }
 
+interface ImmunityView {
+  herdImmunity: number;
+  antibodies: { id: string; recallId: string; label: string; markers: number }[];
+  blocked: { antibodyId: string; title: string; score: number; at: number }[];
+}
+
 const STATE_COLORS: Record<string, string> = {
   clean: "#22c55e",
   suspected: "#f59e0b",
@@ -49,6 +55,8 @@ const EVENT_ICONS: Record<FeedEvent["kind"], string> = {
   probe: "🔎",
   attestation: "📜",
   cleared: "✅",
+  antibody: "💉",
+  immunity: "🛡️",
   info: "ℹ️",
 };
 
@@ -58,6 +66,7 @@ export function App() {
   const [agents, setAgents] = useState<AgentView[]>([]);
   const [status, setStatus] = useState<StatusView | null>(null);
   const [chain, setChain] = useState<ValidatorView | null>(null);
+  const [immunity, setImmunity] = useState<ImmunityView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
@@ -71,12 +80,14 @@ export function App() {
 
   const refresh = useCallback(async () => {
     try {
-      const [g, ev, ag, st] = await Promise.all([
+      const [g, ev, ag, st, im] = await Promise.all([
         apiGet<GraphPayload>("/api/graph"),
         apiGet<FeedEvent[]>("/api/events"),
         apiGet<AgentView[]>("/api/agents"),
         apiGet<StatusView>("/api/status"),
+        apiGet<ImmunityView>("/api/immunity"),
       ]);
+      setImmunity(im);
       const sig =
         g.nodes.map((n) => `${n.id}:${n.state}`).join("|") + `#${g.links.length}`;
       if (sig !== graphSig.current) {
@@ -126,6 +137,7 @@ export function App() {
       body: { role: "auditor", input: { recall_id: "latest" } },
     },
     { label: "Publish clean update", path: "/api/feed-update" },
+    { label: "Re-inject (reworded)", path: "/api/reinject", danger: true },
   ];
 
   return (
@@ -141,6 +153,25 @@ export function App() {
           <span className="chip">recalls {status?.recalls ?? 0}</span>
         </div>
       </header>
+
+      {immunity && immunity.antibodies.length > 0 && (
+        <div className="immunity">
+          <span className="ilabel">
+            💉 Immune memory · herd immunity {immunity.herdImmunity}%
+          </span>
+          {immunity.antibodies.map((a) => (
+            <span key={a.id} className="antibody">
+              {a.id} <em>{a.markers} markers</em>
+            </span>
+          ))}
+          {immunity.blocked.length > 0 && (
+            <span className="blocked-count">
+              {immunity.blocked.length} re-infection
+              {immunity.blocked.length === 1 ? "" : "s"} refused on contact
+            </span>
+          )}
+        </div>
+      )}
 
       {chain && (
         <div className="validators">

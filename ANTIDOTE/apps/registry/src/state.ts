@@ -11,6 +11,7 @@ import type {
   SourceHash,
 } from "@antidote/core";
 import { merkleRoot } from "@antidote/core";
+import type { Antibody } from "./antibodies.ts";
 
 export interface StoredSource extends Source {
   title: string;
@@ -37,6 +38,10 @@ export const db = {
   ingestions: [] as IngestionEvent[],
   recalls: new Map<string, Recall>(),
   attestations: new Map<string, Attestation>(),
+  /** Immune memory: claim fingerprints that the gateway refuses on contact. */
+  antibodies: new Map<string, Antibody>(),
+  /** Ingestion attempts blocked by immunity — the "never again" ledger. */
+  blockedIngestions: [] as { antibodyId: string; title: string; score: number; at: number }[],
   events: [] as FeedEvent[],
   payments: [] as PaymentRecord[],
   /** Feed sources already run through the pipeline. */
@@ -55,6 +60,8 @@ export function reset(): void {
   db.ingestions.length = 0;
   db.recalls.clear();
   db.attestations.clear();
+  db.antibodies.clear();
+  db.blockedIngestions.length = 0;
   db.events.length = 0;
   db.payments.length = 0;
   db.processed.clear();

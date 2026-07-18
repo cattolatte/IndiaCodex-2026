@@ -84,12 +84,30 @@ async function reg<T>(path: string, body?: unknown, method = "POST"): Promise<T>
 
 const regGet = <T>(path: string) => reg<T>(path, undefined, "GET");
 
-/** Ingest through the gateway, then mirror shard texts into local memory. */
+/** Raised when the gateway refuses ingestion because the fleet is immune. */
+class ImmuneRefusal extends Error {
+  constructor(readonly antibody: string) {
+    super(`ingestion refused by antibody ${antibody}`);
+  }
+}
+
+/**
+ * Ingest through the gateway, then mirror shard texts into local memory.
+ * The gateway may refuse (409) when the document matches a known antibody —
+ * that is immunity working, not an error condition.
+ */
 async function ingest(agentId: string, sourceHash: string) {
-  const doc = await reg<{ hash: string; title: string; content: string }>("/api/ingest", {
-    agent: agentId,
-    source: sourceHash,
+  const res = await fetch(`${REGISTRY_URL}/api/ingest`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ agent: agentId, source: sourceHash }),
   });
+  if (res.status === 409) {
+    const { antibody } = (await res.json()) as { antibody: string };
+    throw new ImmuneRefusal(antibody);
+  }
+  if (!res.ok) throw new Error(`/api/ingest → ${res.status}: ${await res.text()}`);
+  const doc = (await res.json()) as { hash: string; title: string; content: string };
   remember(agentId, shardify(doc.content));
   return doc;
 }
@@ -108,10 +126,17 @@ async function publish(agentId: string, title: string, content: string): Promise
 type JobInput = Record<string, unknown>;
 
 async function runResearch(input: JobInput) {
-  const doc = await ingest("agent-research", String(input.source_hash));
-  const summary = await summarize(doc.title, doc.content);
-  const output_source = await publish("agent-research", `Research note: ${doc.title}`, summary);
-  return { output_source, summary };
+  try {
+    const doc = await ingest("agent-research", String(input.source_hash));
+    const summary = await summarize(doc.title, doc.content);
+    const output_source = await publish("agent-research", `Research note: ${doc.title}`, summary);
+    return { output_source, summary };
+  } catch (err) {
+    if (err instanceof ImmuneRefusal) {
+      return { immune: true, antibody: err.antibody };
+    }
+    throw err;
+  }
 }
 
 async function runAnalysis(input: JobInput) {

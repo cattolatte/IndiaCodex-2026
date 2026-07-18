@@ -142,6 +142,8 @@ export interface FeedEvent {
     | "probe"
     | "attestation"
     | "cleared"
+    | "antibody"
+    | "immunity"
     | "info";
   message: string;
   at: number;
