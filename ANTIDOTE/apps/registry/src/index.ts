@@ -13,6 +13,7 @@ import { merkleRoot, sha256, shardify } from "@antidote/core";
 import { chainMode, gatedSpend, validators, type OnChainStatus } from "@antidote/chain";
 import { createMasumiClient } from "@antidote/masumi";
 import { recallClaims, resolveExposure, taintedShardIds } from "./contagion.ts";
+import { detect } from "./detector.ts";
 import { CLEAN_FEED, CLEAN_FOLLOWUP, FORGED_REPORT } from "./seed-data.ts";
 import { db, logEvent, purgeManifest, reset, updateManifest } from "./state.ts";
 
@@ -118,6 +119,44 @@ app.post("/api/sources", async (c) => {
     );
   }
   return c.json({ hash, shardIds: shards.map((s) => s.id) });
+});
+
+/**
+ * Contamination detection: score a source for forgery signals. A suspicious
+ * verdict marks current holders `suspected` — advisory, not blocking. Only a
+ * recall quarantines.
+ */
+app.post("/api/detect", async (c) => {
+  const body = await c.req.json<{ source?: string }>();
+  const hash = body.source === "last-injected" || !body.source ? db.lastInjected : body.source;
+  const src = hash ? db.sources.get(hash) : undefined;
+  if (!src) return c.json({ error: "unknown source" }, 404);
+
+  const verdict = await detect(src.hash, src.title, src.content);
+  logEvent(
+    verdict.verdict === "suspicious" ? "detection" : "info",
+    verdict.verdict === "suspicious"
+      ? `DETECTOR: "${src.title}" scored ${verdict.suspicion}/100 — ${verdict.reasons.join("; ")}`
+      : `Detector: "${src.title}" looks clean (${verdict.suspicion}/100)`,
+    { source: src.hash },
+  );
+
+  if (verdict.verdict === "suspicious") {
+    for (const agent of db.agents.values()) {
+      if (agent.status.kind !== "clean") continue;
+      const holds = src.shardIds.some((s) => agent.manifest.has(s));
+      if (!holds) continue;
+      agent.status = {
+        kind: "suspected",
+        sourceHash: src.hash,
+        reason: verdict.reasons[0] ?? "flagged by detector",
+      };
+      logEvent("exposure", `${agent.name} marked SUSPECTED — holds a flagged source`, {
+        agent: agent.id,
+      });
+    }
+  }
+  return c.json(verdict);
 });
 
 app.get("/api/sources/:hash", (c) => {
@@ -403,7 +442,13 @@ app.get("/api/graph", (c) => {
       type: "agent",
       role: a.role,
       state:
-        a.status.kind === "exposed" ? "exposed" : a.status.kind === "cleared" ? "cleared" : "clean",
+        a.status.kind === "exposed"
+          ? "exposed"
+          : a.status.kind === "cleared"
+            ? "cleared"
+            : a.status.kind === "suspected"
+              ? "suspected"
+              : "clean",
     });
   }
   for (const ev of db.ingestions) {
@@ -457,6 +502,28 @@ app.post("/api/inject", async (c) => {
     source: hash,
   });
   return c.json({ hash });
+});
+
+/** Upload an arbitrary document into the feed (judges can bring their own forgery). */
+app.post("/api/upload", async (c) => {
+  const body = await c.req.json<{ title?: string; content: string }>();
+  if (!body.content?.trim()) return c.json({ error: "empty document" }, 400);
+  const content = body.content.trim();
+  const shards = shardify(content);
+  const hash = sha256(content);
+  const title = body.title?.trim() || "Uploaded document";
+  db.sources.set(hash, {
+    hash,
+    title,
+    content,
+    shardIds: shards.map((s) => s.id),
+    origin: "upload",
+    registeredAt: Date.now(),
+    tainted: false,
+  });
+  db.lastInjected = hash;
+  logEvent("source", `⚠ Uploaded into feed: "${title}"`, { source: hash });
+  return c.json({ hash, shards: shards.length });
 });
 
 app.post("/api/feed-update", async (c) => {

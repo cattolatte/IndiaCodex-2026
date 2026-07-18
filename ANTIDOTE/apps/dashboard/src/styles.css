@@ -106,6 +106,38 @@ button.danger {
   color: #fca5a5;
 }
 
+.upload {
+  background: #101a30;
+  border: 1px solid #1c2947;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.upload summary {
+  cursor: pointer;
+  color: #94a3b8;
+}
+
+.upload input,
+.upload textarea {
+  width: 100%;
+  margin-top: 8px;
+  background: #0b1220;
+  border: 1px solid #2c3a5c;
+  border-radius: 6px;
+  color: #e2e8f0;
+  padding: 7px 9px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.upload button {
+  margin-top: 8px;
+}
+
 .agents {
   display: flex;
   gap: 10px;
@@ -218,6 +250,10 @@ button.danger {
 .ev-hire_refused,
 .ev-exposure {
   background: #2a1215;
+}
+
+.ev-detection {
+  background: #2a2010;
 }
 
 .ev-payment,

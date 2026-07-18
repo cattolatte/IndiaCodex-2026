@@ -27,6 +27,7 @@ interface ValidatorView {
 
 const STATE_COLORS: Record<string, string> = {
   clean: "#22c55e",
+  suspected: "#f59e0b",
   tainted: "#ef4444",
   exposed: "#ef4444",
   cleared: "#3b82f6",
@@ -34,6 +35,7 @@ const STATE_COLORS: Record<string, string> = {
 
 const EVENT_ICONS: Record<FeedEvent["kind"], string> = {
   source: "📰",
+  detection: "🧪",
   ingest: "📥",
   output: "📤",
   trade: "💰",
@@ -57,6 +59,8 @@ export function App() {
   const [status, setStatus] = useState<StatusView | null>(null);
   const [chain, setChain] = useState<ValidatorView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [upTitle, setUpTitle] = useState("");
+  const [upBody, setUpBody] = useState("");
   const graphSig = useRef("");
 
   useEffect(() => {
@@ -109,6 +113,7 @@ export function App() {
     { label: "Seed feed", path: "/api/seed" },
     { label: "Run pipeline", path: "/api/tick" },
     { label: "Inject forged report", path: "/api/inject", danger: true },
+    { label: "Run detector", path: "/api/detect", body: { source: "last-injected" } },
     { label: "Issue recall", path: "/api/recalls", body: { source: "last-injected" } },
     {
       label: "Hire decontamination",
@@ -161,6 +166,31 @@ export function App() {
         ))}
       </div>
 
+      <details className="upload">
+        <summary>Upload your own document into the feed</summary>
+        <input
+          value={upTitle}
+          onChange={(e) => setUpTitle(e.target.value)}
+          placeholder="Document title"
+        />
+        <textarea
+          value={upBody}
+          onChange={(e) => setUpBody(e.target.value)}
+          rows={4}
+          placeholder="Paste any document — a forged earnings report, a poisoned research note…"
+        />
+        <button
+          disabled={busy !== null || upBody.trim().length === 0}
+          onClick={() => {
+            void act("Upload", "/api/upload", { title: upTitle, content: upBody });
+            setUpBody("");
+            setUpTitle("");
+          }}
+        >
+          Upload to feed
+        </button>
+      </details>
+
       <div className="agents">
         {agents.map((a) => (
           <div key={a.id} className="agent" style={{ borderColor: STATE_COLORS[a.status.kind] ?? "#64748b" }}>
@@ -212,6 +242,7 @@ export function App() {
             <span>● agent</span>
             <span>■ source</span>
             <span style={{ color: STATE_COLORS.clean }}>clean</span>
+            <span style={{ color: STATE_COLORS.suspected }}>suspected</span>
             <span style={{ color: STATE_COLORS.exposed }}>tainted / exposed</span>
             <span style={{ color: STATE_COLORS.cleared }}>cleared</span>
           </div>

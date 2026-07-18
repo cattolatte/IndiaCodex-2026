@@ -58,8 +58,19 @@ export interface Recall {
 
 export type ExposureStatus =
   | { kind: "clean" }
+  /** Detector flagged a source this agent holds, but no recall is issued yet. */
+  | { kind: "suspected"; sourceHash: SourceHash; reason: string }
   | { kind: "exposed"; recallId: string; via: "direct" | "transitive" }
   | { kind: "cleared"; recallId: string; attestationId: string };
+
+/** Verdict from the contamination detector on an incoming source. */
+export interface DetectionVerdict {
+  source: SourceHash;
+  /** 0–100; higher means more likely forged/manipulated. */
+  suspicion: number;
+  verdict: "clean" | "suspicious";
+  reasons: string[];
+}
 
 /** Auditor's verdict after the membership-inference-style probe battery. */
 export interface Attestation {
@@ -117,6 +128,7 @@ export interface FeedEvent {
   id: string;
   kind:
     | "source"
+    | "detection"
     | "ingest"
     | "output"
     | "trade"
@@ -144,7 +156,7 @@ export interface GraphNode {
   label: string;
   type: "agent" | "source";
   role?: AgentRole;
-  state: "clean" | "tainted" | "exposed" | "cleared";
+  state: "clean" | "suspected" | "tainted" | "exposed" | "cleared";
 }
 
 export interface GraphLink {
