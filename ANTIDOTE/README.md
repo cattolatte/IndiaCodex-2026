@@ -26,18 +26,24 @@ fleet in minutes. Today's "remedy" is an email asking operators to please re-ind
 1. **Ingestion manifests** — a gateway content-addresses every source into shards and
    records who consumed what (the inverse index recalls need). Manifests commit to
    Merkle roots. The gateway writes them, not the agent — agents can't under-report.
-2. **Staked recalls** — `Recall(source, shards, severity)` from a staked issuer, so the
+2. **Detection** — incoming sources are scored for forgery signals (implausible
+   figures, unattributed sourcing, embedded price predictions). A suspicious verdict
+   marks holders **suspected** — advisory, so an operator knows where to look before
+   anyone pulls the alarm.
+3. **Staked recalls** — `Recall(source, shards, severity)` from a staked issuer, so the
    alarm itself is accountable (false recalls are slashable).
-3. **Exposure resolution** — taint propagates through the graph: agents that ingested
+4. **Exposure resolution** — taint propagates through the graph: agents that ingested
    the poison *and* agents that ingested outputs produced from it are flagged, direct or
    transitive. Exposure keys on the agent's **current** manifest, so a purged agent is
    genuinely clean, not permanently marked.
-4. **Quarantine as an economic gate** — exposure status rides on the agent's Masumi
-   registry identity. Hiring flows refuse quarantined agents and their jobs go unpaid:
-   an agent that can't prove decontamination can't earn. Cross-organizational and
-   instant — no operator can impose this on another operator's agent, but shared
-   registry + payment rails can.
-5. **The immune system — a Masumi agent economy** — decontamination is a hireable,
+5. **Quarantine enforced on-chain** — the agent's spending transaction is composed with
+   the `quarantine_gate` Aiken validator, which reads that agent's status UTXO as a
+   **reference input** and fails the transaction while it is exposed and unattested.
+   Enforcement at consensus: deterministic, cross-organizational, and impossible for
+   one operator to lift on another operator's agent. Exposure status also rides on the
+   agent's Masumi registry identity, so hiring flows route around it — a quarantined
+   agent can neither spend nor earn.
+6. **The immune system — a Masumi agent economy** — decontamination is a hireable,
    **paid** Masumi service that purges recalled shards and recommits the manifest root;
    a staked auditor (a second paid service) probes the cleaned agent
    membership-inference-style and posts the attestation that reopens the gate. Every
@@ -49,19 +55,22 @@ unlearning as attested best-effort.
 ## What's implemented vs. roadmap
 
 **Implemented and runnable** (this repo): content-addressed sharding and Merkle manifest
-commitments · gateway-attested ingestion · the three-agent economic pipeline as MIP-003
-services · forged-source injection and epidemic propagation · staked recall issuance ·
-direct + transitive exposure resolution · quarantine enforcement at the hiring/payment
-layer · paid decontamination with real shard deletion · staked auditor probe batteries
-that **can and do fail** before decontamination · attestations that clear status ·
-live contagion-graph cockpit. Masumi registration and payment run through the payment
-service when configured, and through an interface-identical mock client otherwise.
+commitments · gateway-attested ingestion · contamination detection with a
+suspected state · the three-agent economic pipeline as MIP-003 services · document
+upload plus forged-source injection and epidemic propagation · staked recall issuance ·
+direct + transitive exposure resolution · **three Aiken Plutus V3 validators** with 14
+passing tests, whose real script hashes the dashboard displays and whose gate logic
+rejects a quarantined agent's spend · quarantine at the hiring/payment layer · paid
+decontamination with real shard deletion · staked auditor probe batteries that **can and
+do fail** before decontamination · attestations that clear status · live contagion-graph
+cockpit. Masumi registration and payment run through the payment service when
+configured, and through an interface-identical mock client otherwise; likewise Cardano
+submission runs live with a Blockfrost key and simulated (same validator logic, real
+compiled hashes) without one.
 
-**Roadmap, designed not built:** validator-level enforcement in Aiken (per-agent status
-UTXOs checked via reference inputs, so *any* transaction of an exposed agent fails at
-consensus — design in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)) · ZK proofs of
-decontamination over the manifest root, so an agent proves purity without revealing its
-data diet · weight-level unlearning beyond attested best-effort.
+**Roadmap:** ZK proofs of decontamination over the manifest root, so an agent proves
+purity without revealing its data diet · weight-level unlearning beyond attested
+best-effort · issuer-stake slashing via a full dispute game.
 
 ## Known limitations (stated upfront)
 
@@ -118,22 +127,39 @@ key to go live — no code changes.
 1. **Seed feed** — two clean market sources appear.
 2. **Run pipeline** — research → analysis → trading are each *hired and paid via
    Masumi* (watch the payment feed); the trader correctly HOLDs.
-3. **Inject forged report** — a fake earnings flash enters the feed.
-4. **Run pipeline** — watch the lie propagate node-by-node through the contagion
+3. **Inject forged report** — a fake earnings flash enters the feed. (Or open
+   *Upload your own document* and paste your own forgery.)
+4. **Run detector** — scores it for forgery signals and marks any holder
+   **SUSPECTED** (amber) — advisory, nothing is blocked yet.
+5. **Run pipeline** — watch the lie propagate node-by-node through the contagion
    graph until the trader sizes a **$2.5M BUY** on the forgery.
-5. **Issue recall** — staked recall against the forged source; exposure resolves
+6. **Issue recall** — staked recall against the forged source; exposure resolves
    through the gateway-attested manifests: research (direct), analysis and trading
    (transitive, via each other's outputs). All three are quarantined.
-6. **Run pipeline** again — the hire is **refused**: quarantined agents don't get
-   work. That's the enforcement.
-7. **Hire decontamination** — Medic-1 is hired and paid (25 ADA) to purge the
+7. **Run pipeline** again — two gates fire: the hire is **refused** (quarantined
+   agents don't get work), and any spend attempt is **rejected by the
+   `quarantine_gate` validator**, named in the activity feed by its script hash.
+8. **Hire decontamination** — Medic-1 is hired and paid (25 ADA) to purge the
    recalled shards from each agent's memory; manifest Merkle roots are recommitted.
-8. **Hire auditor** — Auditor-1 is paid (15 ADA) to probe each agent with the forged
+9. **Hire auditor** — Auditor-1 is paid (15 ADA) to probe each agent with the forged
    claims. Purged agents answer "no recollection"; attestations post and statuses
    flip to CLEARED. (Run the audit *before* decontamination and it fails — the
    attestation is earned, not stamped.)
-9. **Publish clean update** + **Run pipeline** — the fleet is hireable again and
-   trades correctly on the real news.
+10. **Publish clean update** + **Run pipeline** — the fleet is hireable again and
+    trades correctly on the real news.
+
+## On-chain enforcement
+
+```bash
+cd contracts && aiken check   # 14 tests
+```
+
+Three Plutus V3 validators in [contracts/](contracts/README.md): `quarantine_gate`
+(fails an exposed agent's spend; a *missing* status reference input also fails, so the
+gate can't be bypassed by omitting evidence), `agent_status` (one status UTXO per agent
+— no eUTXO contention; clearing requires an auditor-signed attestation for the same
+recall), and `recall_registry` (issuer stake, the basis for slashing false recalls).
+The test suite pins the adversarial cases, not just the happy path.
 
 ---
 
