@@ -40,12 +40,18 @@ export const SCRIPT: Beat[] = [
     hold: 2500,
   },
   {
+    say: "That suspicion is tradeable. A skeptic agent stakes 10 ADA against the source being genuine — an open position that this document is a forgery, taken before any institution acts.",
+    path: "/api/doubt",
+    body: { source: "last-injected", skeptic: "Skeptic-1", stakeAda: 10 },
+    hold: 3000,
+  },
+  {
     say: "Watch the lie spread: research summarises it, analysis builds a thesis on that summary, and the trader sizes a $2.5M position on a forgery.",
     path: "/api/tick",
     hold: 3000,
   },
   {
-    say: "A staked recall is issued. Exposure resolves through gateway-written manifests: research directly, analysis and trading transitively — through each other's outputs.",
+    say: "A staked recall is issued. Exposure resolves through gateway-written manifests: research directly, analysis and trading transitively. The recall also settles the doubt market — the skeptic who was early to the lie gets paid over Masumi.",
     path: "/api/recalls",
     body: { source: "last-injected" },
     hold: 3000,

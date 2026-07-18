@@ -60,8 +60,24 @@ const EVENT_ICONS: Record<FeedEvent["kind"], string> = {
   narration: "🎬",
   clone: "🩸",
   autopsy: "🔬",
+  doubt: "📉",
   info: "ℹ️",
 };
+
+interface DoubtView {
+  openPositions: number;
+  openStakeAda: number;
+  settledPositions: number;
+  totalPaidAda: number;
+  positions: {
+    id: string;
+    skeptic: string;
+    sourceLabel: string;
+    stakeAda: number;
+    detectorScoreAtOpen: number;
+    settled?: { won: boolean; payoutAda: number };
+  }[];
+}
 
 interface AutopsyView {
   taintedSources: number;
@@ -106,6 +122,7 @@ export function App() {
   const [auto, setAuto] = useState<AutopilotView | null>(null);
   const [cmp, setCmp] = useState<ComparisonView | null>(null);
   const [post, setPost] = useState<AutopsyView | null>(null);
+  const [doubt, setDoubt] = useState<DoubtView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
@@ -135,6 +152,9 @@ export function App() {
         .catch(() => undefined);
       apiGet<AutopsyView>("/api/autopsy")
         .then(setPost)
+        .catch(() => undefined);
+      apiGet<DoubtView>("/api/doubt")
+        .then(setDoubt)
         .catch(() => undefined);
       const sig =
         g.nodes.map((n) => `${n.id}:${n.state}`).join("|") + `#${g.links.length}`;
@@ -337,6 +357,35 @@ export function App() {
               <li>still ingests the same lie on its next pass</li>
             </ul>
           </div>
+        </div>
+      )}
+
+      {doubt && doubt.positions.length > 0 && (
+        <div className="doubt">
+          <div className="dhead">
+            <h3>📉 Doubt market — short the lie</h3>
+            <span className="sub">
+              {doubt.openPositions} open · {doubt.openStakeAda} ADA at risk ·{" "}
+              {doubt.settledPositions} settled · {doubt.totalPaidAda} ADA paid to skeptics
+            </span>
+          </div>
+          <ul>
+            {doubt.positions.map((p) => (
+              <li key={p.id} className={p.settled ? "won" : "open"}>
+                <strong>{p.skeptic}</strong> staked {p.stakeAda} ADA against “{p.sourceLabel}”
+                {p.detectorScoreAtOpen > 0 && (
+                  <em> · detector {p.detectorScoreAtOpen}/100 at open</em>
+                )}
+                {p.settled ? (
+                  <span className="payout">
+                    recall confirmed — paid {p.settled.payoutAda} ADA
+                  </span>
+                ) : (
+                  <span className="pending">open — burns if no recall arrives</span>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

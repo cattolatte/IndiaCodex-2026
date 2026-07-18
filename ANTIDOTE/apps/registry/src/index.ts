@@ -30,6 +30,7 @@ import {
   taintedShardIds,
 } from "./contagion.ts";
 import { detect } from "./detector.ts";
+import { marketSummary, openPosition, settleOnRecall } from "./doubt-market.ts";
 import { CLEAN_FEED, CLEAN_FOLLOWUP, FORGED_REPORT, MUTATED_FORGERY } from "./seed-data.ts";
 import { db, logEvent, purgeManifest, reset, updateManifest } from "./state.ts";
 
@@ -149,6 +150,7 @@ app.post("/api/detect", async (c) => {
   if (!src) return c.json({ error: "unknown source" }, 404);
 
   const verdict = await detect(src.hash, src.title, src.content);
+  db.lastDetection = { source: src.hash, suspicion: verdict.suspicion };
   logEvent(
     verdict.verdict === "suspicious" ? "detection" : "info",
     verdict.verdict === "suspicious"
@@ -259,13 +261,45 @@ app.post("/api/recalls", async (c) => {
   const resolution = resolveExposure(recall);
   // Immunize: cure the infected, then make the whole fleet immune to a repeat.
   const antibody = mintAntibody(recall);
+  // The doubters were right — pay them.
+  const settlement = settleOnRecall(recall.source, recall.stake);
   return c.json({
     recall: { ...recall, stake: recall.stake.toString() },
     taintedSources: resolution.taintedSources,
     exposed: resolution.exposed,
     antibody: antibody?.id,
+    doubtWinners: settlement.winners.length,
+    doubtPaidAda: Number(settlement.totalPayout) / 1_000_000,
   });
 });
+
+// ---------- doubt market ----------
+
+/** Stake against a source's truthfulness. Being early to a lie pays. */
+app.post("/api/doubt", async (c) => {
+  const body = await c.req.json<{
+    source?: string;
+    skeptic?: string;
+    stakeAda?: number;
+  }>();
+  const hash = !body.source || body.source === "last-injected" ? db.lastInjected : body.source;
+  const src = hash ? db.sources.get(hash) : undefined;
+  if (!src) return c.json({ error: "unknown source" }, 404);
+
+  const position = openPosition({
+    source: src.hash,
+    sourceLabel: src.title,
+    skeptic: body.skeptic ?? "Skeptic-1",
+    stakeLovelace: BigInt(Math.round((body.stakeAda ?? 10) * 1_000_000)),
+    detectorScore: db.lastDetection?.source === src.hash ? db.lastDetection.suspicion : 0,
+  });
+  return c.json({
+    id: position.id,
+    stakeAda: Number(position.stakeLovelace) / 1_000_000,
+  });
+});
+
+app.get("/api/doubt", (c) => c.json(marketSummary()));
 
 /** Immune memory: antibodies held and re-infection attempts refused. */
 app.get("/api/immunity", (c) =>
