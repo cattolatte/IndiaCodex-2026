@@ -385,6 +385,27 @@ export function App() {
     { label: "Re-inject (reworded)", path: "/api/reinject", danger: true },
   ];
 
+  // A cold Render instance takes ~50s to wake. Rather than show a judge a page
+  // of empty panels, hold a branded connecting screen until the first data lands.
+  const connecting = offline && status === null;
+  if (connecting) {
+    return (
+      <div className="waking">
+        <div className="waking-card">
+          <div className="waking-orb" />
+          <h1>
+            ANTIDOTE <span className="sub">epistemic recalls for agent fleets</span>
+          </h1>
+          <p className="waking-status">Waking the fleet…</p>
+          <p className="waking-note">
+            Free hosting spins down when idle. The registry and agent services are
+            starting — this usually takes under a minute. The page connects on its own.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="shell">
       <Flash trigger={flash} />
