@@ -574,12 +574,24 @@ export function App() {
             maxZoom={6}
           />
           <div className="legend">
-            <span>● agent</span>
-            <span>■ source</span>
-            <span style={{ color: STATE_COLORS.clean }}>clean</span>
-            <span style={{ color: STATE_COLORS.suspected }}>suspected</span>
-            <span style={{ color: STATE_COLORS.exposed }}>tainted / exposed</span>
-            <span style={{ color: STATE_COLORS.cleared }}>cleared</span>
+            <span className="swatch" style={{ color: "#93a4c4" }}>
+              <i className="dot" /> agent
+            </span>
+            <span className="swatch" style={{ color: "#93a4c4" }}>
+              <i className="sq" /> source
+            </span>
+            <span className="swatch" style={{ color: STATE_COLORS.clean }}>
+              <i className="dot" /> clean
+            </span>
+            <span className="swatch" style={{ color: STATE_COLORS.suspected }}>
+              <i className="dot" /> suspected
+            </span>
+            <span className="swatch" style={{ color: STATE_COLORS.exposed }}>
+              <i className="dot" /> tainted / exposed
+            </span>
+            <span className="swatch" style={{ color: STATE_COLORS.cleared }}>
+              <i className="dot" /> cleared
+            </span>
           </div>
         </div>
 
@@ -596,6 +608,10 @@ export function App() {
           </ul>
         </div>
       </div>
+
+      {(cmp?.unprotectedFleet.lossUsd ?? 0) > 0 && (
+        <div className="section-label">Evidence</div>
+      )}
 
       {cmp && (cmp.unprotectedFleet.lossUsd > 0 || cmp.protectedFleet.blockedTransactions > 0) && (
         <div className="versus">
