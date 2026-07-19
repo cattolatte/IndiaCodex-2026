@@ -1,0 +1,124 @@
+import { useEffect, useReducer, useRef, useState } from "react";
+
+/**
+ * Small presentational primitives shared across the cockpit. Kept apart from
+ * App.tsx so the main component stays about wiring, not micro-animation.
+ */
+
+/**
+ * Animate a number toward its target with an ease-out curve. The big figures in
+ * this dashboard — causal damage, the loss counter, R0 — carry the argument, so
+ * they earn a beat of motion rather than snapping into place.
+ */
+export function useCountUp(target: number, durationMs = 900): number {
+  const [value, setValue] = useState(target);
+  const fromRef = useRef(target);
+  const startRef = useRef(0);
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    // Nothing to animate; avoid scheduling a frame for a no-op.
+    if (target === value) return;
+    fromRef.current = value;
+    startRef.current = performance.now();
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - startRef.current) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(fromRef.current + (target - fromRef.current) * eased);
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+    // Intentionally keyed on target only: re-running on every `value` change
+    // would restart the animation each frame.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, durationMs]);
+
+  return value;
+}
+
+/** A dollar figure that counts up to its value. */
+export function CountUpUsd({
+  value,
+  className,
+  prefix = "",
+}: {
+  value: number;
+  className?: string;
+  prefix?: string;
+}) {
+  const animated = useCountUp(Math.abs(value));
+  const sign = value < 0 ? "−" : "";
+  return (
+    <span className={className}>
+      {sign}
+      {prefix}${Math.round(animated).toLocaleString()}
+    </span>
+  );
+}
+
+/** A plain number that counts up, with optional suffix (e.g. "%"). */
+export function CountUp({
+  value,
+  suffix = "",
+  decimals = 0,
+  className,
+}: {
+  value: number;
+  suffix?: string;
+  decimals?: number;
+  className?: string;
+}) {
+  const animated = useCountUp(value);
+  return (
+    <span className={className}>
+      {animated.toFixed(decimals)}
+      {suffix}
+    </span>
+  );
+}
+
+/**
+ * A transient full-screen flash for the two most visceral beats — the on-chain
+ * rejection and immunity refusal. It fires once per new occurrence and fades on
+ * its own, so the demo has a punctuation mark the eye can't miss.
+ */
+export type FlashKind = "block" | "immune" | "recall";
+
+const FLASH_TEXT: Record<FlashKind, { label: string; color: string }> = {
+  block: { label: "TRANSACTION REJECTED ON-CHAIN", color: "#f87171" },
+  immune: { label: "RE-INFECTION REFUSED — FLEET IMMUNE", color: "#34d399" },
+  recall: { label: "RECALL ISSUED", color: "#fbbf24" },
+};
+
+export function Flash({ trigger }: { trigger: { kind: FlashKind; id: number } | null }) {
+  const [shown, setShown] = useState<{ kind: FlashKind; id: number } | null>(null);
+  const lastId = useRef(-1);
+
+  useEffect(() => {
+    if (!trigger || trigger.id === lastId.current) return;
+    lastId.current = trigger.id;
+    setShown(trigger);
+    const t = setTimeout(() => setShown(null), 1100);
+    return () => clearTimeout(t);
+  }, [trigger]);
+
+  if (!shown) return null;
+  const { label, color } = FLASH_TEXT[shown.kind];
+  return (
+    <div className="flash" key={shown.id}>
+      <span className="flash-text" style={{ color, borderColor: color }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * A minimal reducer so a component can bump a monotonically increasing id when
+ * it wants to re-trigger a keyed animation.
+ */
+export function useBump(): [number, () => void] {
+  return useReducer((n: number) => n + 1, 0);
+}

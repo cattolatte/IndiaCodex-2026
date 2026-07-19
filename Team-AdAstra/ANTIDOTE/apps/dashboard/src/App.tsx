@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
 import type { FeedEvent, GraphLink, GraphNode, GraphPayload } from "@antidote/core";
 import { apiGet, apiPost } from "./api.ts";
+import { CountUp, CountUpUsd, Flash, type FlashKind } from "./ui.tsx";
 
 interface AgentView {
   id: string;
@@ -174,6 +175,13 @@ export function App() {
   const [epi, setEpi] = useState<EpiView | null>(null);
   const [receipts, setReceipts] = useState<ReceiptView[]>([]);
   const [offline, setOffline] = useState(false);
+  // The most visceral beats get a full-screen flash. Keyed on the triggering
+  // event id so each new occurrence fires exactly once.
+  const [flash, setFlash] = useState<{ kind: FlashKind; id: number } | null>(null);
+  const lastFlashEvent = useRef("");
+  // Don't flash for events already in the feed when the page first loads —
+  // only for beats that happen while someone is watching.
+  const flashHydrated = useRef(false);
   // The force graph needs explicit pixel dimensions, so track its container.
   // Hardcoding them clipped the graph on narrow screens — the first thing a
   // judge opening the live link on a phone would have seen.
@@ -283,6 +291,27 @@ export function App() {
         }
         setGraph({ nodes, links: s.graph.links.map((l) => ({ ...l })) });
       }
+      // Flash on the headline beats. A recall isn't the *last* event (exposures
+      // and the antibody log after it), so scan for the newest matching event
+      // we haven't flashed yet. Event ids are monotonic ("ev_123").
+      const seq = (id: string) => Number(id.replace(/\D/g, "")) || 0;
+      const lastSeq = seq(lastFlashEvent.current);
+      const FLASH_FOR: Record<string, FlashKind> = {
+        blocked: "block",
+        immunity: "immune",
+        recall: "recall",
+      };
+      let best: { ev: FeedEvent; kind: FlashKind } | null = null;
+      for (const ev of s.events) {
+        const kind = FLASH_FOR[ev.kind];
+        if (kind && seq(ev.id) > lastSeq) best = { ev, kind };
+      }
+      if (best) {
+        lastFlashEvent.current = best.ev.id;
+        // First poll only records where we are; it doesn't replay history.
+        if (flashHydrated.current) setFlash({ kind: best.kind, id: seq(best.ev.id) });
+      }
+      flashHydrated.current = true;
       setEvents(s.events);
       setAgents(s.agents);
       setStatus(s.status);
@@ -345,6 +374,7 @@ export function App() {
 
   return (
     <div className="shell">
+      <Flash trigger={flash} />
       <header>
         <h1>
           ANTIDOTE <span className="sub">epistemic recalls for agent fleets</span>
@@ -635,7 +665,7 @@ export function App() {
         <div className="versus">
           <div className="side protected">
             <h3>ANTIDOTE fleet</h3>
-            <span className="figure good">{usd(cmp.protectedFleet.lossUsd)}</span>
+            <CountUpUsd value={cmp.protectedFleet.lossUsd} className="figure good" />
             <span className="sub">lost to the forgery</span>
             <ul>
               <li>{cmp.protectedFleet.blockedTransactions} transaction(s) rejected on-chain</li>
@@ -654,9 +684,10 @@ export function App() {
           </div>
           <div className="side unprotected">
             <h3>Identical fleet, no ANTIDOTE</h3>
-            <span className="figure bad">
-              {cmp.unprotectedFleet.lossUsd > 0 ? `−${usd(cmp.unprotectedFleet.lossUsd)}` : usd(0)}
-            </span>
+            <CountUpUsd
+              value={cmp.unprotectedFleet.lossUsd > 0 ? -cmp.unprotectedFleet.lossUsd : 0}
+              className="figure bad"
+            />
             <span className="sub">
               {cmp.unprotectedFleet.holdingTheBag
                 ? "still holding positions built on a lie"
@@ -677,19 +708,19 @@ export function App() {
           <div className="stats">
             <span>
               <em>R₀</em>
-              {epi.r0}
+              <CountUp value={epi.r0} decimals={2} />
             </span>
             <span>
               <em>attack rate</em>
-              {epi.attackRatePct}%
+              <CountUp value={epi.attackRatePct} suffix="%" />
             </span>
             <span>
               <em>infection depth</em>
-              {epi.infectionDepth}
+              <CountUp value={epi.infectionDepth} />
             </span>
             <span>
               <em>tainted sources</em>
-              {epi.taintedSources}
+              <CountUp value={epi.taintedSources} />
             </span>
             <span>
               <em>exposure window</em>
@@ -784,7 +815,7 @@ export function App() {
         <div className="autopsy">
           <div className="ahead">
             <h3>🔬 Epistemic autopsy — counterfactual replay</h3>
-            <span className="damage">{usd(post.totalDamageUsd)}</span>
+            <CountUpUsd value={post.totalDamageUsd} className="damage" />
             <span className="sub">causal damage attributable to the recalled source</span>
           </div>
           {post.findings.map((f) => (
