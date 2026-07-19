@@ -596,21 +596,46 @@ async function hire(role: AgentRole, input: Record<string, unknown>) {
     { agent: agent.id, txRef: receipt.txHash },
   );
 
-  // The agents are a separate service; treat it as something that can be
-  // asleep or restarting rather than assuming it answers.
-  let job_id: string;
-  try {
-    const startRes = await fetch(`${agent.url}/start_job`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ input }),
-    });
-    if (!startRes.ok) {
-      return { error: `${agent.name} rejected the job (HTTP ${startRes.status})`, agent: agent.id };
+  // The agents are a separate service that can be asleep, waking, or restarting
+  // — on free hosting an idle instance answers 404/502 for the ~50s it takes to
+  // come back. Those are "not ready yet", not "no such agent", so retry before
+  // giving up; otherwise the first judge to open a cold link sees a failed demo.
+  const WAKING = new Set([404, 425, 429, 500, 502, 503, 504]);
+  const START_ATTEMPTS = 6;
+
+  let job_id: string | undefined;
+  let lastError = "";
+
+  for (let attempt = 0; attempt < START_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      // Give the instance time to finish booting; grows 2s, 4s, 6s…
+      await new Promise((r) => setTimeout(r, attempt * 2000));
     }
-    ({ job_id } = (await startRes.json()) as { job_id: string });
-  } catch {
-    return { error: `${agent.name} is unreachable at ${agent.url}`, agent: agent.id };
+    try {
+      const startRes = await fetch(`${agent.url}/start_job`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ input }),
+      });
+      if (startRes.ok) {
+        ({ job_id } = (await startRes.json()) as { job_id: string });
+        break;
+      }
+      lastError = `HTTP ${startRes.status}`;
+      if (!WAKING.has(startRes.status)) break; // a real rejection, not a cold start
+    } catch (err) {
+      lastError = String(err);
+    }
+    if (attempt === 0) {
+      logEvent("info", `${agent.name} not responding yet (${lastError}) — waiting for it to wake`);
+    }
+  }
+
+  if (!job_id) {
+    return {
+      error: `${agent.name} did not accept the job after ${START_ATTEMPTS} attempts (${lastError})`,
+      agent: agent.id,
+    };
   }
 
   // Poll until the job resolves. If the agent disappears mid-job, give up after
