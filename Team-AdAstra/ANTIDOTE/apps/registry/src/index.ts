@@ -18,7 +18,7 @@ import {
   shardify,
   verifyAbsence,
 } from "@antidote/core";
-import { chainMode, gatedSpend, validators, type OnChainStatus } from "@antidote/chain";
+import { chainMode, chainTip, gatedSpend, validators, type OnChainStatus } from "@antidote/chain";
 import { createMasumiClient } from "@antidote/masumi";
 import { herdImmunity, mintAntibody, screen } from "./antibodies.ts";
 import { SCRIPT } from "./autopilot.ts";
@@ -59,10 +59,11 @@ app.use("*", cors());
 
 app.get("/health", (c) => c.json({ ok: true, service: "antidote-registry" }));
 
-app.get("/api/status", (c) =>
+app.get("/api/status", async (c) =>
   c.json({
     masumiMode: masumi.mode,
     chainMode: chainMode(),
+    chainTip: await chainTip(),
     llmMode: llmMode(),
     llmModel: llmModel(),
     agents: db.agents.size,
@@ -729,12 +730,13 @@ app.get("/api/payments", (c) => c.json(db.payments));
  * briefly inconsistent with each other because each response was a different
  * snapshot. One handler means one coherent view of the world.
  */
-app.get("/api/state", (c) => {
+app.get("/api/state", async (c) => {
   const recall = db.recalls.get(db.lastRecall ?? "");
   return c.json({
     status: {
       masumiMode: masumi.mode,
       chainMode: chainMode(),
+      chainTip: await chainTip(),
       llmMode: llmMode(),
       llmModel: llmModel(),
       agents: db.agents.size,

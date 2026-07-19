@@ -23,11 +23,61 @@ export { blueprint, scriptHash, validatorSummary } from "./blueprint.ts";
 export const NETWORK = "preprod" as const;
 
 const BLOCKFROST_KEY = process.env.BLOCKFROST_PROJECT_ID_PREPROD ?? "";
+const WALLET_MNEMONIC = process.env.CARDANO_WALLET_MNEMONIC ?? "";
+const BLOCKFROST_URL = "https://cardano-preprod.blockfrost.io/api/v0";
 
 export type ChainMode = "live" | "simulated";
 
+/**
+ * Whether spends are genuinely submitted to Preprod.
+ *
+ * A Blockfrost key alone only grants *read* access — it cannot sign or submit,
+ * so it must not flip this to "live". Reporting "live" while still evaluating
+ * the gate locally would tell a viewer that transactions are hitting the chain
+ * when they are not, which is precisely the kind of claim this project exists
+ * to make checkable.
+ */
 export function chainMode(): ChainMode {
-  return BLOCKFROST_KEY ? "live" : "simulated";
+  return BLOCKFROST_KEY && WALLET_MNEMONIC ? "live" : "simulated";
+}
+
+export interface ChainTip {
+  network: "preprod";
+  height: number;
+  epoch: number;
+  slot: number;
+  fetchedAt: number;
+}
+
+let tipCache: ChainTip | undefined;
+
+/**
+ * Current Preprod tip via Blockfrost. Read access is real even before wallets
+ * are funded, so this is honest evidence that the system is talking to Cardano
+ * rather than asserting it. Cached briefly — the dashboard polls continuously
+ * and a free tier is a shared budget.
+ */
+export async function chainTip(): Promise<ChainTip | undefined> {
+  if (!BLOCKFROST_KEY) return undefined;
+  if (tipCache && Date.now() - tipCache.fetchedAt < 20_000) return tipCache;
+
+  try {
+    const res = await fetch(`${BLOCKFROST_URL}/blocks/latest`, {
+      headers: { project_id: BLOCKFROST_KEY },
+    });
+    if (!res.ok) return tipCache;
+    const b = (await res.json()) as { height: number; epoch: number; slot: number };
+    tipCache = {
+      network: "preprod",
+      height: b.height,
+      epoch: b.epoch,
+      slot: b.slot,
+      fetchedAt: Date.now(),
+    };
+    return tipCache;
+  } catch {
+    return tipCache;
+  }
 }
 
 export type OnChainStatus =

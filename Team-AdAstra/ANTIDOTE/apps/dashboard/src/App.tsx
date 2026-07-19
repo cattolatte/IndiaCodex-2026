@@ -15,6 +15,7 @@ interface AgentView {
 interface StatusView {
   masumiMode: string;
   chainMode: string;
+  chainTip?: { network: string; height: number; epoch: number };
   llmMode: string;
   llmModel: string;
   agents: number;
@@ -312,7 +313,24 @@ export function App() {
             AI: {status?.llmMode === "live" ? status.llmModel : (status?.llmMode ?? "…")}
           </span>
           <span className="chip">Masumi: {status?.masumiMode ?? "…"}</span>
-          <span className="chip">Cardano: {status?.chainMode ?? "…"}</span>
+          <span
+            className={`chip${status?.chainTip ? " live" : ""}`}
+            title={
+              status?.chainTip
+                ? `Connected to Cardano ${status.chainTip.network} · epoch ${status.chainTip.epoch}. ` +
+                  `Spends are evaluated against the compiled validators; ${
+                    status.chainMode === "live"
+                      ? "transactions are submitted on-chain."
+                      : "submission needs a funded wallet."
+                  }`
+                : "No chain connection configured"
+            }
+          >
+            Cardano:{" "}
+            {status?.chainTip
+              ? `${status.chainTip.network} · block ${status.chainTip.height.toLocaleString()}`
+              : (status?.chainMode ?? "…")}
+          </span>
           <span className="chip">sources {status?.sources ?? 0}</span>
           <span className="chip">recalls {status?.recalls ?? 0}</span>
         </div>
