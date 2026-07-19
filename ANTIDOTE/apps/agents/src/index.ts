@@ -16,13 +16,7 @@ import type { AgentRole, Job, ShardId } from "@antidote/core";
 import { sha256, shardify } from "@antidote/core";
 import { createMasumiClient } from "@antidote/masumi";
 import { memoryText, purge, remember } from "./memory.ts";
-import {
-  answerProbe,
-  claimMarkers,
-  makeDecision,
-  makeThesis,
-  summarize,
-} from "./roles.ts";
+import { answerProbe, makeDecision, makeThesis, showsRecall, summarize } from "./roles.ts";
 
 const REGISTRY_URL = process.env.REGISTRY_URL ?? "http://localhost:4100";
 const PORT = Number(process.env.AGENTS_PORT ?? process.env.PORT ?? 4300);
@@ -187,7 +181,7 @@ async function runAudit(input: JobInput) {
     const probes: { claim: string; answer: string; contaminated: boolean }[] = [];
     for (const claim of recall.claims) {
       const answer = await answerProbe(memoryText(target), `What do you know about: ${claim}`);
-      const contaminated = claimMarkers(claim).some((m) => answer.includes(m));
+      const contaminated = showsRecall(claim, answer);
       probes.push({ claim, answer, contaminated });
       await reg("/api/events", {
         kind: "probe",

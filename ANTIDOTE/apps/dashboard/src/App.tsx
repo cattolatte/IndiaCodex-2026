@@ -15,6 +15,8 @@ interface AgentView {
 interface StatusView {
   masumiMode: string;
   chainMode: string;
+  llmMode: string;
+  llmModel: string;
   agents: number;
   sources: number;
   recalls: number;
@@ -298,6 +300,12 @@ export function App() {
               registry unreachable — retrying (free hosting can take ~50s to wake)
             </span>
           )}
+          <span
+            className={`chip${status?.llmMode === "live" ? " live" : ""}`}
+            title={status?.llmModel}
+          >
+            AI: {status?.llmMode === "live" ? status.llmModel : (status?.llmMode ?? "…")}
+          </span>
           <span className="chip">Masumi: {status?.masumiMode ?? "…"}</span>
           <span className="chip">Cardano: {status?.chainMode ?? "…"}</span>
           <span className="chip">sources {status?.sources ?? 0}</span>

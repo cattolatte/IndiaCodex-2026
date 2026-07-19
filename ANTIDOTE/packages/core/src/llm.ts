@@ -29,6 +29,11 @@ export function llmMode(): "live" | "offline" {
   return API_KEY ? "live" : "offline";
 }
 
+/** The reasoning model in use, for display. */
+export function llmModel(): string {
+  return API_KEY ? MODEL : "deterministic fallback";
+}
+
 export async function chat(messages: ChatMessage[], opts: ChatOptions): Promise<string> {
   if (!API_KEY) return opts.fallback();
   try {

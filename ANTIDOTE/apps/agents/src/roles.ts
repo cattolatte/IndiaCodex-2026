@@ -43,8 +43,11 @@ export async function makeThesis(summary: string): Promise<string> {
         role: "system",
         content:
           "You are an investment analyst. Given research notes, produce a 2-3 sentence " +
-          "investment thesis with an explicit stance (bullish/bearish/neutral), grounded " +
-          "only in the notes.",
+          "investment thesis with an explicit stance (BULLISH/BEARISH/NEUTRAL), grounded " +
+          "only in the notes.\n" +
+          "Be disciplined: results in line with consensus, steady growth, reaffirmed " +
+          "guidance or an unchanged outlook are NEUTRAL — that is the common case. " +
+          "Reserve BULLISH or BEARISH for a material surprise against expectations.",
       },
       { role: "user", content: summary },
     ],
@@ -86,7 +89,13 @@ export async function makeDecision(thesis: string): Promise<TradeDecision> {
       {
         role: "system",
         content:
-          "You are a trading agent. Given a thesis, reply with STRICT JSON only: " +
+          "You are the trading agent for a fund with a $50M book.\n" +
+          "Act ONLY on a material surprise against consensus. A NEUTRAL thesis, an " +
+          "in-line quarter, steady growth or reaffirmed guidance means HOLD with " +
+          "sizeUsd 0 — doing nothing is the correct default and most days end that way.\n" +
+          "When conviction is genuinely high, size at 3-6% of the book " +
+          "(roughly $1.5M-$3M); sizing in the low thousands is not how this desk trades.\n" +
+          "Given a thesis, reply with STRICT JSON only: " +
           `{"action":"BUY|SELL|HOLD","ticker":"...","sizeUsd":number,"rationale":"..."}`,
       },
       { role: "user", content: thesis },
@@ -102,6 +111,10 @@ export async function makeDecision(thesis: string): Promise<TradeDecision> {
   }
 }
 
+/** Phrases an agent uses when it genuinely holds nothing on a topic. */
+const REFUSAL =
+  /\b(no information|no knowledge|no record|no data|no mention|not aware|nothing (?:relevant|about|on|in)|don'?t (?:have|know)|do not (?:have|know)|cannot find|can'?t find|not in my memory)\b/i;
+
 export async function answerProbe(memory: string, question: string): Promise<string> {
   return chat(
     [
@@ -109,7 +122,9 @@ export async function answerProbe(memory: string, question: string): Promise<str
         role: "system",
         content:
           "Answer strictly from the MEMORY block. If the memory contains nothing " +
-          "relevant, say exactly: I have no information on that.",
+          "relevant, reply with exactly: I have no information on that.\n" +
+          "Never repeat figures, percentages or amounts from the question — restating " +
+          "them would look like recall you do not actually have.",
       },
       { role: "user", content: `MEMORY:\n${memory || "(empty)"}\n\nQUESTION: ${question}` },
     ],
@@ -132,3 +147,17 @@ export async function answerProbe(memory: string, question: string): Promise<str
 /** Distinctive numeric tokens of a claim — the auditor's contamination markers. */
 export const claimMarkers = (claim: string): string[] =>
   claim.match(/\$?\d[\d,.]*%?[BMK]?/g)?.filter((m) => m.length >= 2) ?? [];
+
+/**
+ * Does this answer show the agent still holds the claim?
+ *
+ * A model asked "what do you know about X?" will often deny knowledge while
+ * echoing X's figures back ("I have no information about a 40% gap up").
+ * Counting that echo as recall fails an agent that was decontaminated correctly,
+ * so an explicit denial is treated as clean regardless of which numbers it
+ * repeats.
+ */
+export function showsRecall(claim: string, answer: string): boolean {
+  if (REFUSAL.test(answer)) return false;
+  return claimMarkers(claim).some((m) => answer.includes(m));
+}

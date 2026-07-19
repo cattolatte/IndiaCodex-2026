@@ -9,7 +9,15 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { AgentRole, GraphPayload, Recall } from "@antidote/core";
-import { merkleRoot, proveAbsence, sha256, shardify, verifyAbsence } from "@antidote/core";
+import {
+  llmMode,
+  llmModel,
+  merkleRoot,
+  proveAbsence,
+  sha256,
+  shardify,
+  verifyAbsence,
+} from "@antidote/core";
 import { chainMode, gatedSpend, validators, type OnChainStatus } from "@antidote/chain";
 import { createMasumiClient } from "@antidote/masumi";
 import { herdImmunity, mintAntibody, screen } from "./antibodies.ts";
@@ -55,6 +63,8 @@ app.get("/api/status", (c) =>
   c.json({
     masumiMode: masumi.mode,
     chainMode: chainMode(),
+    llmMode: llmMode(),
+    llmModel: llmModel(),
     agents: db.agents.size,
     sources: db.sources.size,
     recalls: db.recalls.size,
@@ -722,6 +732,8 @@ app.get("/api/state", (c) => {
     status: {
       masumiMode: masumi.mode,
       chainMode: chainMode(),
+      llmMode: llmMode(),
+      llmModel: llmModel(),
       agents: db.agents.size,
       sources: db.sources.size,
       recalls: db.recalls.size,
