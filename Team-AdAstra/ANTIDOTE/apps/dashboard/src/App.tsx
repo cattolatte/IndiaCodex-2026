@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import ForceGraph2D from "react-force-graph-2d";
-import type { FeedEvent, GraphPayload } from "@antidote/core";
+import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
+import type { FeedEvent, GraphLink, GraphNode, GraphPayload } from "@antidote/core";
 import { apiGet, apiPost } from "./api.ts";
 
 interface AgentView {
@@ -178,6 +178,7 @@ export function App() {
   // Hardcoding them clipped the graph on narrow screens — the first thing a
   // judge opening the live link on a phone would have seen.
   const graphBox = useRef<HTMLDivElement>(null);
+  const fgRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(undefined);
   const [graphSize, setGraphSize] = useState({ width: 780, height: 520 });
 
   useEffect(() => {
@@ -189,7 +190,7 @@ export function App() {
       setGraphSize((prev) =>
         prev.width === width
           ? prev
-          : { width, height: Math.max(300, Math.min(560, Math.round(width * 0.66))) },
+          : { width, height: Math.max(300, Math.min(430, Math.round(width * 0.52))) },
       );
     };
     measure();
@@ -210,6 +211,22 @@ export function App() {
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
   const graphSig = useRef("");
+
+  // Nodes appear and disappear as the story runs; re-fit so the cluster stays
+  // centred instead of drifting to an edge of the panel.
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || graph.nodes.length === 0) return;
+
+    // Default repulsion assumes a linked graph. Before any ingestion the five
+    // agents have no links at all, so they drift to the corners; damping the
+    // charge and pinning a mild centre keeps the idle state composed.
+    fg.d3Force("charge")?.strength(-70);
+    fg.d3Force("link")?.distance(60);
+
+    const t = setTimeout(() => fg.zoomToFit(400, 60), 700);
+    return () => clearTimeout(t);
+  }, [graph]);
 
   useEffect(() => {
     apiGet<ValidatorView>("/api/validators")
@@ -366,18 +383,18 @@ export function App() {
         </div>
       )}
 
-      {!auto?.running && auto?.beat === 0 && (
+      {/* Orientation for a cold visitor. Once anything is happening the graph
+          tells the story better, so this yields rather than pushing it down. */}
+      {!auto?.running && auto?.beat === 0 && (status?.recalls ?? 0) === 0 && (
         <div className="intro">
           <p>
-            Agents read documents and act on what they read. When a source turns out to
-            be forged, there is no way to recall it from every agent that ingested it —
-            no equivalent of a food or drug recall for information.
+            Agents read documents and act on what they read. When a source turns out to be
+            forged, there is no way to claw it back from every agent that ingested it — no
+            equivalent of a food or drug recall for information.
             <strong> ANTIDOTE is that missing infrastructure.</strong>
           </p>
           <p className="cta">
-            New here? Press <strong>▶ Run full demo</strong> — about 90 seconds, no setup.
-            It infects a live agent fleet with a forged earnings report, then detects,
-            quarantines, treats, verifies and immunises it while you watch.
+            Press <strong>▶ Run full demo</strong> — ~90 seconds, no setup.
           </p>
         </div>
       )}
@@ -417,34 +434,13 @@ export function App() {
         ))}
       </div>
 
-      <details className="upload">
-        <summary>Upload your own document into the feed</summary>
-        <input
-          value={upTitle}
-          onChange={(e) => setUpTitle(e.target.value)}
-          placeholder="Document title"
-        />
-        <textarea
-          value={upBody}
-          onChange={(e) => setUpBody(e.target.value)}
-          rows={4}
-          placeholder="Paste any document — a forged earnings report, a poisoned research note…"
-        />
-        <button
-          disabled={busy !== null || auto?.running || upBody.trim().length === 0}
-          onClick={() => {
-            void act("Upload", "/api/upload", { title: upTitle, content: upBody });
-            setUpBody("");
-            setUpTitle("");
-          }}
-        >
-          Upload to feed
-        </button>
-      </details>
-
       <div className="agents">
         {agents.map((a) => (
-          <div key={a.id} className="agent" style={{ borderColor: STATE_COLORS[a.status.kind] ?? "#64748b" }}>
+          <div
+            key={a.id}
+            className={`agent${a.status.kind === "exposed" ? " is-alert" : ""}`}
+            style={{ borderColor: STATE_COLORS[a.status.kind] ?? "#64748b", color: STATE_COLORS[a.status.kind] ?? "#64748b" }}
+          >
             <strong>{a.name}</strong>
             <span className="role">{a.role}</span>
             <span className="state" style={{ color: STATE_COLORS[a.status.kind] ?? "#94a3b8" }}>
@@ -454,6 +450,124 @@ export function App() {
             <span className="mid">{a.masumiId ?? "unregistered"}</span>
           </div>
         ))}
+      </div>
+
+      <div className="main">
+        <div className="graph-panel" ref={graphBox}>
+          <ForceGraph2D
+            ref={fgRef}
+            // Re-frame once the simulation settles, otherwise the cluster drifts
+            // to a corner of a panel that has since been resized.
+            onEngineStop={() => fgRef.current?.zoomToFit(500, 60)}
+            graphData={graph}
+            width={graphSize.width}
+            height={graphSize.height}
+            backgroundColor="#0b1220"
+            nodeLabel={(node) => {
+              const g = node as unknown as GraphNode;
+              const kind = g.type === "agent" ? (g.role ?? "agent") : "source";
+              return `<div class="gtip"><strong>${g.label}</strong><span>${kind} · ${g.state}</span></div>`;
+            }}
+            nodeCanvasObject={(node, ctx, scale) => {
+              const n = node as unknown as GraphNode & { x: number; y: number };
+              // Every size is divided by the zoom scale so nodes stay constant
+              // on screen. Previously these were graph-space constants, so when
+              // the view auto-zoomed to fit a few nodes they rendered enormous.
+              const px = (v: number) => v / scale;
+              const color = STATE_COLORS[n.state] ?? "#64748b";
+              const isAgent = n.type === "agent";
+              const r = isAgent ? px(7) : px(5);
+
+              // A soft halo makes contamination legible at a glance without
+              // changing the node's footprint.
+              if (n.state === "exposed" || n.state === "tainted" || n.state === "cleared") {
+                const glow = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r * 3);
+                glow.addColorStop(0, `${color}55`);
+                glow.addColorStop(1, `${color}00`);
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, r * 3, 0, 2 * Math.PI);
+                ctx.fill();
+              }
+
+              ctx.fillStyle = color;
+              ctx.strokeStyle = "#0b1220";
+              ctx.lineWidth = px(1.5);
+              if (isAgent) {
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+              } else {
+                ctx.fillRect(n.x - r, n.y - r, r * 2, r * 2);
+                ctx.strokeRect(n.x - r, n.y - r, r * 2, r * 2);
+              }
+
+              // Only agents are permanently labelled. Source titles are long and
+              // outnumber the agents, so drawing them all turned the canvas into
+              // overlapping text — they live in the hover tooltip instead.
+              if (!isAgent) return;
+
+              const label = n.label.length > 22 ? `${n.label.slice(0, 21)}…` : n.label;
+              const fontPx = px(12);
+              ctx.font = `600 ${fontPx}px system-ui, sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "top";
+
+              // Backing plate keeps names readable where they cross links.
+              const w = ctx.measureText(label).width;
+              const pad = px(3);
+              const top = n.y + r + px(4);
+              ctx.fillStyle = "rgba(11,18,32,0.75)";
+              ctx.fillRect(n.x - w / 2 - pad, top - pad / 2, w + pad * 2, fontPx + pad);
+              ctx.fillStyle = "#e2e8f0";
+              ctx.fillText(label, n.x, top);
+            }}
+            nodePointerAreaPaint={(node, paintColor, ctx, scale) => {
+              const n = node as unknown as { x: number; y: number };
+              ctx.fillStyle = paintColor;
+              ctx.beginPath();
+              ctx.arc(n.x, n.y, 9 / scale, 0, 2 * Math.PI);
+              ctx.fill();
+            }}
+            linkColor={(l) => ((l as { kind?: string }).kind === "output" ? "#6366f1" : "#243047")}
+            linkWidth={(l) => ((l as { kind?: string }).kind === "output" ? 1.4 : 0.8)}
+            linkCurvature={0.12}
+            // Particles travel the way information actually flows, so contagion
+            // reads as movement rather than being inferred from colour alone.
+            linkDirectionalParticles={2}
+            linkDirectionalParticleWidth={2}
+            linkDirectionalParticleSpeed={0.006}
+            linkDirectionalParticleColor={(l) =>
+              (l as { kind?: string }).kind === "output" ? "#a5b4fc" : "#475569"
+            }
+            cooldownTicks={140}
+            d3VelocityDecay={0.28}
+            minZoom={0.5}
+            maxZoom={6}
+          />
+          <div className="legend">
+            <span>● agent</span>
+            <span>■ source</span>
+            <span style={{ color: STATE_COLORS.clean }}>clean</span>
+            <span style={{ color: STATE_COLORS.suspected }}>suspected</span>
+            <span style={{ color: STATE_COLORS.exposed }}>tainted / exposed</span>
+            <span style={{ color: STATE_COLORS.cleared }}>cleared</span>
+          </div>
+        </div>
+
+        <div className="feed">
+          <h2>Activity</h2>
+          <ul>
+            {[...events].reverse().map((ev) => (
+              <li key={ev.id} className={`ev ev-${ev.kind}`}>
+                <span className="icon">{EVENT_ICONS[ev.kind]}</span>
+                <span className="msg">{ev.message}</span>
+                {ev.txRef && <code className="tx">{ev.txRef.slice(0, 18)}…</code>}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
       {cmp && (cmp.unprotectedFleet.lossUsd > 0 || cmp.protectedFleet.blockedTransactions > 0) && (
@@ -631,62 +745,31 @@ export function App() {
         </div>
       )}
 
-      <div className="main">
-        <div className="graph-panel" ref={graphBox}>
-          <ForceGraph2D
-            graphData={graph}
-            width={graphSize.width}
-            height={graphSize.height}
-            backgroundColor="#0b1220"
-            nodeCanvasObject={(node, ctx, scale) => {
-              const n = node as unknown as GraphPayload["nodes"][number] & {
-                x: number;
-                y: number;
-              };
-              const color = STATE_COLORS[n.state] ?? "#64748b";
-              ctx.fillStyle = color;
-              if (n.type === "agent") {
-                ctx.beginPath();
-                ctx.arc(n.x, n.y, 7, 0, 2 * Math.PI);
-                ctx.fill();
-              } else {
-                ctx.fillRect(n.x - 5, n.y - 5, 10, 10);
-              }
-              const label = n.label.length > 28 ? `${n.label.slice(0, 27)}…` : n.label;
-              ctx.font = `${11 / scale ** 0.4}px system-ui`;
-              ctx.textAlign = "center";
-              ctx.fillStyle = "#cbd5e1";
-              ctx.fillText(label, n.x, n.y + 16);
-            }}
-            linkColor={(l) =>
-              (l as { kind?: string }).kind === "output" ? "#818cf8" : "#334155"
-            }
-            linkDirectionalArrowLength={4}
-            linkDirectionalArrowRelPos={1}
-          />
-          <div className="legend">
-            <span>● agent</span>
-            <span>■ source</span>
-            <span style={{ color: STATE_COLORS.clean }}>clean</span>
-            <span style={{ color: STATE_COLORS.suspected }}>suspected</span>
-            <span style={{ color: STATE_COLORS.exposed }}>tainted / exposed</span>
-            <span style={{ color: STATE_COLORS.cleared }}>cleared</span>
-          </div>
-        </div>
 
-        <div className="feed">
-          <h2>Activity</h2>
-          <ul>
-            {[...events].reverse().map((ev) => (
-              <li key={ev.id} className={`ev ev-${ev.kind}`}>
-                <span className="icon">{EVENT_ICONS[ev.kind]}</span>
-                <span className="msg">{ev.message}</span>
-                {ev.txRef && <code className="tx">{ev.txRef.slice(0, 18)}…</code>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <details className="upload">
+        <summary>Upload your own document into the feed</summary>
+        <input
+          value={upTitle}
+          onChange={(e) => setUpTitle(e.target.value)}
+          placeholder="Document title"
+        />
+        <textarea
+          value={upBody}
+          onChange={(e) => setUpBody(e.target.value)}
+          rows={4}
+          placeholder="Paste any document — a forged earnings report, a poisoned research note…"
+        />
+        <button
+          disabled={busy !== null || auto?.running || upBody.trim().length === 0}
+          onClick={() => {
+            void act("Upload", "/api/upload", { title: upTitle, content: upBody });
+            setUpBody("");
+            setUpTitle("");
+          }}
+        >
+          Upload to feed
+        </button>
+      </details>
     </div>
   );
 }
