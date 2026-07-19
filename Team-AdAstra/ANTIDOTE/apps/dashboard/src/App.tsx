@@ -385,6 +385,23 @@ export function App() {
     { label: "Re-inject (reworded)", path: "/api/reinject", danger: true },
   ];
 
+  // Space launches the full demo — a small courtesy for whoever is driving the
+  // live link. Ignored while typing in the upload box or while a run is going.
+  const canLaunch = !autopilotRunning && busy === null;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (e.code === "Space" && canLaunch) {
+        e.preventDefault();
+        void act("Autopilot", "/api/autopilot");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canLaunch]);
+
   // A cold Render instance takes ~50s to wake. Rather than show a judge a page
   // of empty panels, hold a branded connecting screen until the first data lands.
   const connecting = offline && status === null;
@@ -519,7 +536,7 @@ export function App() {
           {auto?.running ? "▶ Running…" : "▶ Run full demo"}
         </button>
         <span className="controls-hint">
-          runs the whole story · ~90s
+          runs the whole story · ~90s · press <kbd>Space</kbd>
         </span>
       </div>
 

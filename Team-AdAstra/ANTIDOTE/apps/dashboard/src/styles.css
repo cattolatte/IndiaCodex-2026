@@ -1178,3 +1178,16 @@ body::before {
   line-height: 1.6;
   max-width: 42ch;
 }
+
+/* --- keyboard hint ------------------------------------------------------- */
+
+kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 6px;
+  color: var(--text-dim);
+}
