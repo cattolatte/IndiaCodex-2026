@@ -250,11 +250,16 @@ export function App() {
     }
   }, []);
 
+  // Poll faster while the autopilot is driving so the narration stays in step
+  // with the graph. Derived to a plain boolean so the dependency list is a
+  // stable shape rather than flipping between undefined and a value.
+  const autopilotRunning = auto?.running ?? false;
+
   useEffect(() => {
     void refresh();
-    const t = setInterval(() => void refresh(), auto?.running ? 700 : 2000);
+    const t = setInterval(() => void refresh(), autopilotRunning ? 700 : 2000);
     return () => clearInterval(t);
-  }, [refresh, auto?.running]);
+  }, [refresh, autopilotRunning]);
 
   const act = async (label: string, path: string, body?: unknown) => {
     setBusy(label);
