@@ -190,7 +190,7 @@ export function App() {
       setGraphSize((prev) =>
         prev.width === width
           ? prev
-          : { width, height: Math.max(300, Math.min(430, Math.round(width * 0.52))) },
+          : { width, height: Math.max(320, Math.min(480, Math.round(width * 0.58))) },
       );
     };
     measure();
@@ -224,9 +224,11 @@ export function App() {
     // let a full run collapse into an unreadable knot. distanceMax stops the
     // disconnected idle state from flinging nodes to the corners instead.
     const charge = fg.d3Force("charge");
-    charge?.strength(-260);
-    charge?.distanceMax(420);
-    fg.d3Force("link")?.distance(90);
+    charge?.strength(-140);
+    // Capping the range keeps distant nodes from shoving each other to the
+    // edges, which stretched links right across the canvas.
+    charge?.distanceMax(260);
+    fg.d3Force("link")?.distance(58);
   }, []);
 
   // Re-frame only when the node count changes. Re-fitting on every state change
@@ -235,8 +237,13 @@ export function App() {
   const nodeCount = graph.nodes.length;
   useEffect(() => {
     if (nodeCount === 0) return;
-    const t = setTimeout(() => fgRef.current?.zoomToFit(400, 60), 900);
-    return () => clearTimeout(t);
+    // The layout keeps drifting for a second or two after new nodes arrive, so
+    // a single fit lands while things are still moving and leaves stragglers
+    // outside the frame. Re-fit a few times as it settles.
+    const timers = [500, 1400, 2600].map((delay) =>
+      setTimeout(() => fgRef.current?.zoomToFit(400, 36), delay),
+    );
+    return () => timers.forEach(clearTimeout);
   }, [nodeCount]);
 
   useEffect(() => {
@@ -447,7 +454,17 @@ export function App() {
         >
           {auto?.running ? "▶ Running…" : "▶ Run full demo"}
         </button>
-        {controls.map((ctl) => (
+        <span className="controls-hint">
+          runs the whole story · ~90s
+        </span>
+      </div>
+
+      {/* Ten equal buttons gave a first-time viewer no focal action. The manual
+          steps stay available, but folded away behind the one that matters. */}
+      <details className="steps">
+        <summary>Drive it step by step</summary>
+        <div className="controls">
+          {controls.map((ctl) => (
           <button
             key={ctl.label}
             className={ctl.danger ? "danger" : ""}
@@ -456,10 +473,11 @@ export function App() {
             disabled={busy !== null || auto?.running}
             onClick={() => void act(ctl.label, ctl.path, ctl.body)}
           >
-            {busy === ctl.label ? "…working" : ctl.label}
-          </button>
-        ))}
-      </div>
+              {busy === ctl.label ? "…working" : ctl.label}
+            </button>
+          ))}
+        </div>
+      </details>
 
       <div className="agents">
         {agents.map((a) => (
