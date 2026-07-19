@@ -211,22 +211,28 @@ export function App() {
   const [upTitle, setUpTitle] = useState("");
   const [upBody, setUpBody] = useState("");
   const graphSig = useRef("");
+  // Node objects persist across polls so the force layout is never restarted.
+  const nodeCache = useRef<Map<string, GraphNode>>(new Map());
 
-  // Nodes appear and disappear as the story runs; re-fit so the cluster stays
-  // centred instead of drifting to an edge of the panel.
+  // Default repulsion assumes a linked graph. Before any ingestion the five
+  // agents have no links at all, so they drift to the corners; damping the
+  // charge keeps the idle state composed.
   useEffect(() => {
     const fg = fgRef.current;
-    if (!fg || graph.nodes.length === 0) return;
-
-    // Default repulsion assumes a linked graph. Before any ingestion the five
-    // agents have no links at all, so they drift to the corners; damping the
-    // charge and pinning a mild centre keeps the idle state composed.
+    if (!fg) return;
     fg.d3Force("charge")?.strength(-70);
     fg.d3Force("link")?.distance(60);
+  }, []);
 
-    const t = setTimeout(() => fg.zoomToFit(400, 60), 700);
+  // Re-frame only when the node count changes. Re-fitting on every state change
+  // meant the timer was cancelled and rescheduled by each poll during a run, so
+  // it never actually fired.
+  const nodeCount = graph.nodes.length;
+  useEffect(() => {
+    if (nodeCount === 0) return;
+    const t = setTimeout(() => fgRef.current?.zoomToFit(400, 60), 900);
     return () => clearTimeout(t);
-  }, [graph]);
+  }, [nodeCount]);
 
   useEffect(() => {
     apiGet<ValidatorView>("/api/validators")
@@ -246,10 +252,24 @@ export function App() {
         s.graph.nodes.map((n) => `${n.id}:${n.state}`).join("|") + `#${s.graph.links.length}`;
       if (sig !== graphSig.current) {
         graphSig.current = sig;
-        setGraph({
-          nodes: s.graph.nodes.map((n) => ({ ...n })),
-          links: s.graph.links.map((l) => ({ ...l })),
+        // Reuse the existing node objects so the simulation keeps their x/y and
+        // velocity. Handing the graph brand-new objects restarted the layout on
+        // every status change, which threw the nodes off screen mid-demo.
+        const live = nodeCache.current;
+        const nodes = s.graph.nodes.map((incoming) => {
+          const existing = live.get(incoming.id);
+          if (existing) {
+            Object.assign(existing, incoming);
+            return existing;
+          }
+          const created = { ...incoming } as GraphNode;
+          live.set(incoming.id, created);
+          return created;
         });
+        for (const id of [...live.keys()]) {
+          if (!s.graph.nodes.some((n) => n.id === id)) live.delete(id);
+        }
+        setGraph({ nodes, links: s.graph.links.map((l) => ({ ...l })) });
       }
       setEvents(s.events);
       setAgents(s.agents);
