@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
+import { forceCollide, forceX, forceY } from "d3-force";
 import type { FeedEvent, GraphLink, GraphNode, GraphPayload } from "@antidote/core";
 import { apiGet, apiPost } from "./api.ts";
 import { CountUp, CountUpUsd, Flash, type FlashKind } from "./ui.tsx";
@@ -237,6 +238,18 @@ export function App() {
     // edges, which stretched links right across the canvas.
     charge?.distanceMax(260);
     fg.d3Force("link")?.distance(58);
+    // A collision radius gives every node personal space, which stops two agent
+    // labels ("Medic-1" over "Research-1") from landing on top of each other —
+    // agents claim more room than sources because their labels are always drawn.
+    fg.d3Force(
+      "collide",
+      forceCollide((n) => ((n as GraphNode).type === "agent" ? 34 : 16)).strength(0.9),
+    );
+    // A gentle pull toward the origin keeps disconnected agents (clean Medic and
+    // Auditor before they're ever hired) from escaping the frame, without
+    // collapsing the linked cluster the way a strong centre force would.
+    fg.d3Force("x", forceX(0).strength(0.06));
+    fg.d3Force("y", forceY(0).strength(0.06));
   }, []);
 
   // Re-frame only when the node count changes. Re-fitting on every state change
