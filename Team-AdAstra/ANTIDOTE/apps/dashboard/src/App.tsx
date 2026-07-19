@@ -220,8 +220,13 @@ export function App() {
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg) return;
-    fg.d3Force("charge")?.strength(-70);
-    fg.d3Force("link")?.distance(60);
+    // Repulsion has to grow with the corpus: tuned for the idle five agents it
+    // let a full run collapse into an unreadable knot. distanceMax stops the
+    // disconnected idle state from flinging nodes to the corners instead.
+    const charge = fg.d3Force("charge");
+    charge?.strength(-260);
+    charge?.distanceMax(420);
+    fg.d3Force("link")?.distance(90);
   }, []);
 
   // Re-frame only when the node count changes. Re-fitting on every state change
@@ -424,6 +429,8 @@ export function App() {
           className={`narration${auto.running ? " live" : ""}${
             !auto.running && auto.failures > 0 ? " failed" : ""
           }`}
+          // Drives the progress rail along the bottom edge of the banner.
+          style={{ ["--progress" as string]: `${(auto.beat / auto.total) * 100}%` }}
         >
           <span className="beat">
             {auto.running ? `${auto.beat}/${auto.total}` : auto.failures > 0 ? "!" : "✓"}
