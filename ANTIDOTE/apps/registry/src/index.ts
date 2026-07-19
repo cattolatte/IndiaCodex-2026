@@ -623,8 +623,21 @@ async function hire(role: AgentRole, input: Record<string, unknown>) {
 }
 
 app.post("/api/hire", async (c) => {
-  const body = await c.req.json<{ role: AgentRole; input?: Record<string, unknown> }>();
-  return c.json(await hire(body.role, body.input ?? {}));
+  const body = await c.req
+    .json<{ role: AgentRole; input?: Record<string, unknown> }>()
+    .catch(() => null);
+  if (!body?.role) return c.json({ error: "role is required" }, 400);
+
+  const result = await hire(body.role, body.input ?? {});
+
+  // A refusal is a successful call reporting a business outcome — the agent is
+  // quarantined, which is the system working. A missing or unreachable agent is
+  // a real failure and should not be dressed up as a 200.
+  if ("error" in result && result.error) {
+    const status = result.error.startsWith("no agent for role") ? 404 : 502;
+    return c.json(result, status);
+  }
+  return c.json(result);
 });
 
 /** One pipeline cycle: newest unprocessed feed source → research → analysis → trading. */
