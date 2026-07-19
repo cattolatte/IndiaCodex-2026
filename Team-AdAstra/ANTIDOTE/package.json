@@ -10,9 +10,15 @@
     "typecheck": "pnpm -r --parallel exec tsc --noEmit",
     "dev:registry": "pnpm --filter @antidote/registry dev",
     "dev:agents": "pnpm --filter @antidote/agents dev",
-    "dev:dashboard": "pnpm --filter @antidote/dashboard dev"
+    "dev:dashboard": "pnpm --filter @antidote/dashboard dev",
+    "start:registry": "tsx apps/registry/src/index.ts",
+    "start:agents": "tsx apps/agents/src/index.ts"
   },
   "devDependencies": {
     "vitest": "^4.1.10"
+  },
+  "packageManager": "pnpm@11.8.0",
+  "dependencies": {
+    "tsx": "^4.19.0"
   }
 }
