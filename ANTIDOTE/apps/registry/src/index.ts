@@ -41,7 +41,7 @@ import {
 import { detect } from "./detector.ts";
 import { marketSummary, openPosition, settleOnRecall } from "./doubt-market.ts";
 import { CLEAN_FEED, CLEAN_FOLLOWUP, FORGED_REPORT, MUTATED_FORGERY } from "./seed-data.ts";
-import { db, logEvent, purgeManifest, reset, updateManifest } from "./state.ts";
+import { cap, db, logEvent, purgeManifest, reset, updateManifest } from "./state.ts";
 
 const masumi = createMasumiClient();
 
@@ -223,6 +223,7 @@ app.post("/api/ingest", async (c) => {
       score: immune.score,
       at: Date.now(),
     });
+    cap(db.blockedIngestions, 50);
     logEvent(
       "immunity",
       `INGESTION REFUSED: "${src.title}" matched antibody ${immune.antibody.id} ` +
@@ -422,6 +423,7 @@ app.post("/api/purge", async (c) => {
     at: Date.now(),
     proofs: receipts,
   });
+  cap(db.purgeReceipts, 50);
 
   logEvent(
     "purge",
@@ -586,6 +588,7 @@ async function hire(role: AgentRole, input: Record<string, unknown>) {
     note: receipt.note,
     at: Date.now(),
   });
+  cap(db.payments, 100);
   logEvent(
     "payment",
     `Paid ${agent.name} ${Number(receipt.amountLovelace) / 1_000_000} ADA via Masumi (${masumi.mode})`,

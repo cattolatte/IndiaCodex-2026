@@ -1,5 +1,5 @@
 import type { SourceHash } from "@antidote/core";
-import { db, logEvent } from "./state.ts";
+import { cap, db, logEvent } from "./state.ts";
 
 /**
  * The doubt market.
@@ -52,6 +52,7 @@ export function openPosition(opts: {
     detectorScoreAtOpen: opts.detectorScore,
   };
   db.doubts.push(position);
+  cap(db.doubts, 100);
   logEvent(
     "doubt",
     `${opts.skeptic} staked ${Number(opts.stakeLovelace) / 1_000_000} ADA AGAINST ` +

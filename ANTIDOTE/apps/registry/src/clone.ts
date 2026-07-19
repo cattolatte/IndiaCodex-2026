@@ -1,4 +1,4 @@
-import { db, logEvent } from "./state.ts";
+import { cap, db, logEvent } from "./state.ts";
 
 /**
  * The control group.
@@ -40,6 +40,7 @@ export function mirrorTrade(
 ): void {
   if (sizeUsd <= 0) return;
   clone.positions.push({ ticker, sizeUsd, openedAt: Date.now(), poisoned });
+  cap(clone.positions, 100);
   if (poisoned) clone.holdingTheBag = true;
   logEvent(
     "clone",

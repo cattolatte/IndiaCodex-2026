@@ -91,6 +91,19 @@ export function reset(): void {
   db.lastDetection = undefined;
 }
 
+/**
+ * Trim an append-only ledger to its most recent entries.
+ *
+ * These collections are display-only and every one of them is serialised on
+ * each dashboard poll, so an instance left running for a long session would
+ * grow its own response payload without bound. Sources and ingestions are
+ * deliberately *not* capped: exposure resolution walks them, and dropping
+ * history there would silently change who a recall finds.
+ */
+export function cap<T>(ledger: T[], keep: number): void {
+  if (ledger.length > keep) ledger.splice(0, ledger.length - keep);
+}
+
 let eventSeq = 0;
 
 export function logEvent(
@@ -106,7 +119,7 @@ export function logEvent(
     ...extra,
   };
   db.events.push(ev);
-  if (db.events.length > 500) db.events.splice(0, db.events.length - 500);
+  cap(db.events, 500);
   return ev;
 }
 

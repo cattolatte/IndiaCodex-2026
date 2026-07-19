@@ -1,6 +1,6 @@
 import type { AgentId, SourceHash } from "@antidote/core";
 import { sha256 } from "@antidote/core";
-import { db, logEvent } from "./state.ts";
+import { cap, db, logEvent } from "./state.ts";
 
 /**
  * Sentinel surveillance — canary tokens.
@@ -111,6 +111,7 @@ export function scanForCanaries(publisher: AgentId, content: string): CanaryHit[
 
     if (!declared) {
       db.canaryHits.push(hit);
+      cap(db.canaryHits, 50);
       const name = publisherRecord?.name ?? publisher;
       const issuedName = db.agents.get(origin.agent)?.name ?? origin.agent;
       logEvent(
