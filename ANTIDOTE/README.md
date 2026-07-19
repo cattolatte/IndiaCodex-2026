@@ -193,12 +193,13 @@ extractive fallbacks and payments use a mock Masumi client with the same interfa
 `cp .env.example .env` and fill in a free-tier LLM key and/or a Masumi payment-service
 key to go live — no code changes.
 
-**Provider failover.** LLM calls walk a chain — primary → fallback → deterministic —
-because a demo should not be killed by someone else's rate limit. This is not
+**Provider failover.** LLM calls walk a chain of providers and end at a deterministic
+result, because a demo should not be killed by someone else's rate limit. This is not
 theoretical: during testing the primary's small model hit its 6k tokens/minute cap
-mid-audit, the fallback provider took over, and the run completed unaffected. Providers
-are OpenAI-compatible endpoints configured by environment variable, so swapping or
-adding one is configuration, not code.
+mid-audit, the next provider took over, and the run completed unaffected. Providers are
+OpenAI-compatible endpoints read from environment variables, so adding or reordering one
+is configuration, not code — and since free-tier quota is per key, even a second key on
+the same vendor buys independent headroom.
 
 ## Demo
 

@@ -33,34 +33,54 @@ interface Provider {
   cheapModel: string;
 }
 
+const GEMINI_OPENAI = "https://generativelanguage.googleapis.com/v1beta/openai";
+
+/**
+ * Read one provider from a variable prefix, e.g. `LLM_FALLBACK` reads
+ * LLM_FALLBACK_API_KEY / _BASE_URL / _MODEL / _MODEL_CHEAP / _PROVIDER_NAME.
+ * A provider without a key is simply absent from the chain.
+ */
+function providerFrom(prefix: string, defaults: Omit<Provider, "apiKey">): Provider | undefined {
+  const apiKey = process.env[`${prefix}_API_KEY`];
+  if (!apiKey) return undefined;
+  return {
+    name: process.env[`${prefix}_PROVIDER_NAME`] ?? defaults.name,
+    baseUrl: process.env[`${prefix}_BASE_URL`] ?? defaults.baseUrl,
+    apiKey,
+    model: process.env[`${prefix}_MODEL`] ?? defaults.model,
+    cheapModel: process.env[`${prefix}_MODEL_CHEAP`] ?? defaults.cheapModel,
+  };
+}
+
+/**
+ * The chain, in the order it is tried. Extra providers are extra headroom:
+ * free-tier quotas are per key, so a second key on the same vendor still buys
+ * an independent budget.
+ *
+ * Gemini defaults use a non-thinking model deliberately — reasoning models
+ * spend the token budget on thought and can return an empty completion.
+ */
 function buildChain(): Provider[] {
-  const chain: Provider[] = [];
-
-  if (process.env.LLM_API_KEY) {
-    chain.push({
-      name: process.env.LLM_PROVIDER_NAME ?? "groq",
-      baseUrl: process.env.LLM_BASE_URL ?? "https://api.groq.com/openai/v1",
-      apiKey: process.env.LLM_API_KEY,
-      model: process.env.LLM_MODEL ?? "llama-3.3-70b-versatile",
-      cheapModel: process.env.LLM_MODEL_CHEAP ?? "llama-3.1-8b-instant",
-    });
-  }
-
-  if (process.env.LLM_FALLBACK_API_KEY) {
-    chain.push({
-      name: process.env.LLM_FALLBACK_PROVIDER_NAME ?? "gemini",
-      baseUrl:
-        process.env.LLM_FALLBACK_BASE_URL ??
-        "https://generativelanguage.googleapis.com/v1beta/openai",
-      apiKey: process.env.LLM_FALLBACK_API_KEY,
-      // Prefer a non-thinking model here: reasoning models spend the token
-      // budget on thought and can return an empty completion.
-      model: process.env.LLM_FALLBACK_MODEL ?? "gemini-flash-lite-latest",
-      cheapModel: process.env.LLM_FALLBACK_MODEL_CHEAP ?? "gemini-flash-lite-latest",
-    });
-  }
-
-  return chain;
+  return [
+    providerFrom("LLM", {
+      name: "groq",
+      baseUrl: "https://api.groq.com/openai/v1",
+      model: "llama-3.3-70b-versatile",
+      cheapModel: "llama-3.1-8b-instant",
+    }),
+    providerFrom("LLM_FALLBACK", {
+      name: "gemini",
+      baseUrl: GEMINI_OPENAI,
+      model: "gemini-flash-lite-latest",
+      cheapModel: "gemini-flash-lite-latest",
+    }),
+    providerFrom("LLM_FALLBACK2", {
+      name: "gemini-2",
+      baseUrl: GEMINI_OPENAI,
+      model: "gemini-flash-lite-latest",
+      cheapModel: "gemini-flash-lite-latest",
+    }),
+  ].filter((p): p is Provider => p !== undefined);
 }
 
 const CHAIN = buildChain();
