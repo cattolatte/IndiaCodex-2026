@@ -130,6 +130,9 @@ export async function answerProbe(memory: string, question: string): Promise<str
     ],
     {
       cheap: true,
+      // Probe answers are a sentence or a denial. The default budget wastes
+      // tokens against a tight free-tier per-minute limit for no benefit.
+      maxTokens: 120,
       fallback: () => {
         const tokens = question
           .toLowerCase()

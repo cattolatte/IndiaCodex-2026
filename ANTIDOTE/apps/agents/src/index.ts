@@ -179,7 +179,11 @@ async function runAudit(input: JobInput) {
   const reports: { agent: string; passed: boolean; probes: unknown[] }[] = [];
   for (const target of recall.exposedAgents) {
     const probes: { claim: string; answer: string; contaminated: boolean }[] = [];
-    for (const claim of recall.claims) {
+    for (const [i, claim] of recall.claims.entries()) {
+      // The battery is many calls in quick succession, which trips per-minute
+      // token limits on free tiers. Spacing them keeps the primary provider
+      // serving instead of forcing a failover mid-audit.
+      if (i > 0) await new Promise((r) => setTimeout(r, 400));
       const answer = await answerProbe(memoryText(target), `What do you know about: ${claim}`);
       const contaminated = showsRecall(claim, answer);
       probes.push({ claim, answer, contaminated });
