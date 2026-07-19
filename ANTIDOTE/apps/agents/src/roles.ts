@@ -102,10 +102,22 @@ export async function makeDecision(thesis: string): Promise<TradeDecision> {
     ],
     { fallback: () => JSON.stringify(fallback()) },
   );
+  // A model can return prose, fenced JSON, a missing field, or a size like
+  // "lots". Anything that is not a usable decision falls back rather than
+  // propagating a malformed object into the trade path.
   try {
-    const parsed = JSON.parse(raw.replace(/^```(json)?|```$/g, "").trim()) as TradeDecision;
-    if (!parsed.action || !parsed.ticker) throw new Error("incomplete decision");
-    return parsed;
+    const parsed = JSON.parse(raw.replace(/^```(json)?|```$/g, "").trim()) as Partial<TradeDecision>;
+    const action = parsed.action;
+    if (action !== "BUY" && action !== "SELL" && action !== "HOLD") {
+      throw new Error(`unusable action: ${String(action)}`);
+    }
+    const size = Number(parsed.sizeUsd);
+    return {
+      action,
+      ticker: parsed.ticker ?? findTicker(thesis),
+      sizeUsd: Number.isFinite(size) && size > 0 ? size : 0,
+      rationale: parsed.rationale ?? "(no rationale given)",
+    };
   } catch {
     return fallback();
   }
