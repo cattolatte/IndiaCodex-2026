@@ -1338,3 +1338,28 @@ kbd {
   color: var(--text-faint);
   letter-spacing: 0.3px;
 }
+
+/* --- graph panel title ---------------------------------------------------- */
+
+.graph-title {
+  position: absolute;
+  top: var(--s3);
+  left: var(--s3);
+  z-index: 2;
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--text-dim);
+}
+
+.graph-title span {
+  display: block;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}

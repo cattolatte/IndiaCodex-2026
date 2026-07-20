@@ -587,6 +587,10 @@ export function App() {
 
       <div className="main">
         <div className="graph-panel" ref={graphBox}>
+          <div className="graph-title">
+            Contagion graph
+            <span>agents · sources · derived outputs</span>
+          </div>
           <ForceGraph2D
             ref={fgRef}
             // Re-frame once the simulation settles, otherwise the cluster drifts
