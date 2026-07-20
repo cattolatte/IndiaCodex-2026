@@ -44,7 +44,7 @@ export function mirrorTrade(
   if (poisoned) clone.holdingTheBag = true;
   logEvent(
     "clone",
-    `Unprotected fleet: BUY ${ticker} $${sizeUsd.toLocaleString()} — no recall infrastructure, nothing stops it`,
+    `Unprotected fleet: BUY ${ticker} $${sizeUsd.toLocaleString("en-US")} — no recall infrastructure, nothing stops it`,
   );
 }
 
@@ -61,7 +61,7 @@ export function markToTruth(): number {
   for (const p of exposed) p.sizeUsd = 0;
   logEvent(
     "clone",
-    `Unprotected fleet marked to truth: −$${Math.round(loss).toLocaleString()} on positions taken from the forgery`,
+    `Unprotected fleet marked to truth: −$${Math.round(loss).toLocaleString("en-US")} on positions taken from the forgery`,
   );
   return loss;
 }

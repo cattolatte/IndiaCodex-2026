@@ -146,7 +146,7 @@ async function runTrading(input: JobInput) {
   const description =
     decision.action === "HOLD"
       ? "HOLD — no position change"
-      : `${decision.action} ${decision.ticker} $${decision.sizeUsd.toLocaleString()}`;
+      : `${decision.action} ${decision.ticker} $${decision.sizeUsd.toLocaleString("en-US")}`;
   const execution = await reg<{ executed: boolean; refused?: boolean; ref?: string }>(
     "/api/execute",
     { agent: "agent-trading", description },

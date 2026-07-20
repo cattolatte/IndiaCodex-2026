@@ -92,7 +92,7 @@ export function autopsy(recallSource: SourceHash): AutopsyReport {
     const agentName = db.agents.get(ev.agent)?.name ?? ev.agent;
     findings.push({
       agent: agentName,
-      actual: `${match[1]} ${match[2]} $${sizeUsd.toLocaleString()}`,
+      actual: `${match[1]} ${match[2]} $${sizeUsd.toLocaleString("en-US")}`,
       counterfactual: "HOLD — no position change",
       damageUsd: sizeUsd,
       decisiveShards: decisiveShards.slice(0, 4),

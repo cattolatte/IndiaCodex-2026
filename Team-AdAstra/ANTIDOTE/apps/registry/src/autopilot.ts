@@ -34,7 +34,7 @@ export const SCRIPT: Beat[] = [
     hold: 1500,
   },
   {
-    say: "The detector scores it for forgery signals and marks holders SUSPECTED — advisory only. Nothing is blocked yet.",
+    say: "The detector scores it for forgery signals and raises an advisory suspicion flag on the source — it's only advisory: nothing is blocked, and no agent has ingested it yet.",
     path: "/api/detect",
     body: { source: "last-injected" },
     hold: 2500,
@@ -57,7 +57,7 @@ export const SCRIPT: Beat[] = [
     hold: 3000,
   },
   {
-    say: "Mid-mistake, the trader tries to act on its position — and the transaction is rejected on-chain by the quarantine_gate validator. Not our backend being polite: the script refuses the spend.",
+    say: "Mid-mistake, the trader tries to act on its position — and the quarantine_gate validator refuses the spend. That's the compiled Plutus script's own logic, evaluated against the agent's status (submission simulated in this build) — not our backend being polite.",
     path: "/api/execute",
     body: { agent: "agent-trading", description: "BUY ORBX $2,500,000" },
     hold: 3500,

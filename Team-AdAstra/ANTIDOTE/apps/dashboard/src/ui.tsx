@@ -61,7 +61,7 @@ export function CountUpUsd({
   return (
     <span className={className}>
       {sign}
-      {prefix}${Math.round(animated).toLocaleString()}
+      {prefix}${Math.round(animated).toLocaleString("en-US")}
     </span>
   );
 }
@@ -95,7 +95,7 @@ export function CountUp({
 export type FlashKind = "block" | "immune" | "recall";
 
 const FLASH_TEXT: Record<FlashKind, { label: string; color: string }> = {
-  block: { label: "TRANSACTION REJECTED ON-CHAIN", color: "#f87171" },
+  block: { label: "QUARANTINE GATE · SPEND REJECTED", color: "#f87171" },
   immune: { label: "RE-INFECTION REFUSED — FLEET IMMUNE", color: "#34d399" },
   recall: { label: "RECALL ISSUED", color: "#fbbf24" },
 };

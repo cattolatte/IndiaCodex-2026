@@ -159,7 +159,7 @@ interface ComparisonView {
   unprotectedFleet: { lossUsd: number; openPositions: number; holdingTheBag: boolean };
 }
 
-const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
+const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 /** Compact relative time for the activity feed — "now", "12s", "4m", "2h". */
 function ago(at: number, now: number): string {
@@ -490,18 +490,15 @@ export function App() {
             className={`chip${status?.chainTip ? " live" : ""}`}
             title={
               status?.chainTip
-                ? `Connected to Cardano ${status.chainTip.network} · epoch ${status.chainTip.epoch}. ` +
-                  `Spends are evaluated against the compiled validators; ${
-                    status.chainMode === "live"
-                      ? "transactions are submitted on-chain."
-                      : "submission needs a funded wallet."
-                  }`
+                ? `Connected to Cardano ${status.chainTip.network} · epoch ${status.chainTip.epoch} ` +
+                  `(live chain tip, read-only via Blockfrost). The quarantine gate is evaluated against ` +
+                  `the compiled validators locally — on-chain submission is simulated in this build.`
                 : "No chain connection configured"
             }
           >
             Cardano:{" "}
             {status?.chainTip
-              ? `${status.chainTip.network} · block ${status.chainTip.height.toLocaleString()}`
+              ? `${status.chainTip.network} · block ${status.chainTip.height.toLocaleString("en-US")}`
               : (status?.chainMode ?? "…")}
           </span>
           <span className="chip">sources {status?.sources ?? 0}</span>
@@ -797,7 +794,7 @@ export function App() {
             <CountUpUsd value={cmp.protectedFleet.lossUsd} className="figure good" />
             <span className="sub">lost to the forgery</span>
             <ul>
-              <li>{cmp.protectedFleet.blockedTransactions} transaction(s) rejected on-chain</li>
+              <li>{cmp.protectedFleet.blockedTransactions} transaction(s) blocked by the quarantine gate</li>
               <li>{cmp.protectedFleet.refusedHires} hire(s) refused</li>
               <li>{cmp.protectedFleet.refusedIngestions} re-infection(s) refused</li>
               {cmp.protectedFleet.exposureWindowMs !== undefined && (

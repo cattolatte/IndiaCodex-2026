@@ -26,19 +26,41 @@ const BLOCKFROST_KEY = process.env.BLOCKFROST_PROJECT_ID_PREPROD ?? "";
 const WALLET_MNEMONIC = process.env.CARDANO_WALLET_MNEMONIC ?? "";
 const BLOCKFROST_URL = "https://cardano-preprod.blockfrost.io/api/v0";
 
+/** fetch with a hard timeout, so a slow Blockfrost never hangs the request. */
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export type ChainMode = "live" | "simulated";
 
 /**
  * Whether spends are genuinely submitted to Preprod.
  *
- * A Blockfrost key alone only grants *read* access — it cannot sign or submit,
- * so it must not flip this to "live". Reporting "live" while still evaluating
- * the gate locally would tell a viewer that transactions are hitting the chain
- * when they are not, which is precisely the kind of claim this project exists
- * to make checkable.
+ * Two honesty guards, strongest first:
+ *
+ *  1. Live submission — signing and submitting a real transaction that the
+ *     on-chain validator then evaluates — is NOT implemented in this build (see
+ *     `gatedSpend` below, which evaluates the gate logic locally). While that is
+ *     true the mode is always "simulated", so nothing can ever claim a
+ *     transaction hit the chain when it did not. Flip `LIVE_SUBMISSION` to true
+ *     only once real submission is wired.
+ *  2. Even then, a Blockfrost key alone grants only *read* access — it cannot
+ *     sign or submit — so a funded wallet mnemonic is also required.
+ *
+ * Reporting "live" while still evaluating locally would tell a viewer that
+ * transactions are hitting the chain when they are not, which is precisely the
+ * kind of claim this project exists to make checkable.
  */
+const LIVE_SUBMISSION = false;
+
 export function chainMode(): ChainMode {
-  return BLOCKFROST_KEY && WALLET_MNEMONIC ? "live" : "simulated";
+  return LIVE_SUBMISSION && BLOCKFROST_KEY && WALLET_MNEMONIC ? "live" : "simulated";
 }
 
 export interface ChainTip {
@@ -62,9 +84,11 @@ export async function chainTip(): Promise<ChainTip | undefined> {
   if (tipCache && Date.now() - tipCache.fetchedAt < 20_000) return tipCache;
 
   try {
-    const res = await fetch(`${BLOCKFROST_URL}/blocks/latest`, {
-      headers: { project_id: BLOCKFROST_KEY },
-    });
+    const res = await fetchWithTimeout(
+      `${BLOCKFROST_URL}/blocks/latest`,
+      { headers: { project_id: BLOCKFROST_KEY } },
+      6000,
+    );
     if (!res.ok) return tipCache;
     const b = (await res.json()) as { height: number; epoch: number; slot: number };
     tipCache = {

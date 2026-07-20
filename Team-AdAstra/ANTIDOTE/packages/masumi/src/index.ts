@@ -47,19 +47,34 @@ const PAYMENT_SERVICE_URL =
 const API_KEY = process.env.MASUMI_PAYMENT_API_KEY ?? "";
 const NETWORK = process.env.MASUMI_NETWORK ?? "Preprod";
 
+/** fetch with a hard timeout so a hung payment service can't block a hire. */
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 class LiveMasumi implements MasumiClient {
   mode = "live" as const;
 
   private async call<T>(path: string, body?: unknown, method = "POST"): Promise<T> {
-    const res = await fetch(`${PAYMENT_SERVICE_URL}${path}`, {
-      method,
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": API_KEY,
-        token: API_KEY,
+    const res = await fetchWithTimeout(
+      `${PAYMENT_SERVICE_URL}${path}`,
+      {
+        method,
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": API_KEY,
+          token: API_KEY,
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
+      8000,
+    );
     if (!res.ok) {
       throw new Error(`masumi ${method} ${path} → ${res.status}: ${await res.text()}`);
     }

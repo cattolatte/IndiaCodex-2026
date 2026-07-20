@@ -86,7 +86,7 @@ export function settleOnRecall(
     logEvent(
       "doubt",
       `DOUBT PAID: ${position.skeptic} was right about "${position.sourceLabel}" — ` +
-        `${Number(payout) / 1_000_000} ADA settled over Masumi. Being early to a lie is a revenue stream.`,
+        `${Number(payout) / 1_000_000} ADA owed. Being early to a lie is a revenue stream.`,
       { source },
     );
   }

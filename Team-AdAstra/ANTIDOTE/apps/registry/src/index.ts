@@ -289,8 +289,37 @@ app.post("/api/recalls", async (c) => {
   const resolution = resolveExposure(recall);
   // Immunize: cure the infected, then make the whole fleet immune to a repeat.
   const antibody = mintAntibody(recall);
-  // The doubters were right — pay them.
+  // The doubters were right — pay them, for real, over the same Masumi rails as
+  // every other payment in the system. A payout failure (e.g. a live-network
+  // hiccup) must never break the recall itself, so each one is best-effort.
   const settlement = settleOnRecall(recall.source, recall.stake);
+  for (const winner of settlement.winners) {
+    const payout = winner.settled?.payoutLovelace ?? 0n;
+    if (payout <= 0n) continue;
+    try {
+      const receipt = await masumi.payForJob({
+        seller: winner.skeptic,
+        jobId: `doubt_${winner.id}`,
+        amountLovelace: payout,
+        note: "doubt-market settlement",
+      });
+      db.payments.push({
+        txRef: receipt.txHash,
+        seller: winner.skeptic,
+        amountAda: Number(receipt.amountLovelace) / 1_000_000,
+        note: receipt.note,
+        at: Date.now(),
+      });
+      cap(db.payments, 100);
+      logEvent(
+        "payment",
+        `Paid ${winner.skeptic} ${Number(payout) / 1_000_000} ADA via Masumi (${masumi.mode}) — doubt-market settlement`,
+        { txRef: receipt.txHash },
+      );
+    } catch (err) {
+      logEvent("info", `Doubt payout to ${winner.skeptic} deferred: ${String(err)}`);
+    }
+  }
   return c.json({
     recall: { ...recall, stake: recall.stake.toString() },
     taintedSources: resolution.taintedSources,
@@ -543,8 +572,8 @@ app.post("/api/execute", async (c) => {
   if (!gate.allowed) {
     logEvent(
       "blocked",
-      `TRANSACTION REJECTED on-chain: ${agent.name} attempted "${body.description}" — ` +
-        `quarantine_gate validator ${gate.validator.slice(0, 16)}… refused the spend`,
+      `TRANSACTION REJECTED by quarantine_gate (simulated): ${agent.name} attempted "${body.description}" — ` +
+        `compiled validator ${gate.validator.slice(0, 16)}… refused the spend (gate logic evaluated locally)`,
       { agent: agent.id, txRef: gate.txRef },
     );
     return c.json({ executed: false, refused: true, gate });
@@ -948,7 +977,7 @@ app.post("/api/autopsy", async (c) => {
     report.findings.length === 0
       ? "Autopsy: no decisions were causally influenced by the recalled source."
       : `AUTOPSY: replayed ${report.findings.length} decision(s) without the recalled shards — ` +
-          `causal damage $${report.totalDamageUsd.toLocaleString()}. ` +
+          `causal damage $${report.totalDamageUsd.toLocaleString("en-US")}. ` +
           `Counterfactually the position is never opened.`,
     { source: hash },
   );

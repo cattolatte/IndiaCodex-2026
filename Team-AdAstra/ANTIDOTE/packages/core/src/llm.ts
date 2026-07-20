@@ -103,24 +103,47 @@ export function llmProviders(): { name: string; model: string; active: boolean }
   return CHAIN.map((p) => ({ name: p.name, model: p.model, active: p.name === activeProvider }));
 }
 
+/**
+ * Per-provider hard timeout. A free-tier endpoint that hangs would otherwise
+ * block the whole request indefinitely; aborting lets the chain fail over to the
+ * next provider (and ultimately the deterministic fallback) instead of freezing
+ * the demo live.
+ */
+const LLM_TIMEOUT_MS = 8000;
+
+/** fetch with a hard timeout so a hung provider fails over instead of blocking. */
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function callProvider(
   provider: Provider,
   messages: ChatMessage[],
   opts: ChatOptions,
 ): Promise<string> {
-  const res = await fetch(`${provider.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${provider.apiKey}`,
+  const res = await fetchWithTimeout(
+    `${provider.baseUrl}/chat/completions`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${provider.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: opts.cheap ? provider.cheapModel : provider.model,
+        messages,
+        max_tokens: opts.maxTokens ?? 400,
+        temperature: 0.2,
+      }),
     },
-    body: JSON.stringify({
-      model: opts.cheap ? provider.cheapModel : provider.model,
-      messages,
-      max_tokens: opts.maxTokens ?? 400,
-      temperature: 0.2,
-    }),
-  });
+    LLM_TIMEOUT_MS,
+  );
 
   if (!res.ok) {
     throw new Error(`${provider.name} ${res.status}: ${(await res.text()).slice(0, 200)}`);

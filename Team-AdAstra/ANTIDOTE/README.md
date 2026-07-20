@@ -220,8 +220,9 @@ Or drive it manually:
    Masumi* (watch the payment feed); the trader correctly HOLDs.
 3. **Inject forged report** — a fake earnings flash enters the feed. (Or open
    *Upload your own document* and paste your own forgery.)
-4. **Run detector** — scores it for forgery signals and marks any holder
-   **SUSPECTED** (amber) — advisory, nothing is blocked yet.
+4. **Run detector** — scores it for forgery signals and raises an advisory
+   suspicion flag on the source; nothing is blocked yet. (Any agent already
+   holding the flagged source is marked **SUSPECTED**/amber.)
 5. **Run pipeline** — watch the lie propagate node-by-node through the contagion
    graph until the trader sizes a **multi-million-dollar BUY** on the forgery.
 6. **Issue recall** — staked recall against the forged source; exposure resolves
