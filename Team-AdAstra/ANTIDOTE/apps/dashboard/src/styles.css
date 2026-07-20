@@ -1394,3 +1394,30 @@ body::-webkit-scrollbar-track {
 html {
   scroll-behavior: smooth;
 }
+
+/* --- evidence cascade + tactile panels -----------------------------------
+   The evidence panels appear together after a run; a short stagger lets them
+   cascade in so the eye follows the argument down the page. */
+
+.versus { animation-delay: 0ms; }
+.epi { animation-delay: 60ms; }
+.receipts { animation-delay: 120ms; }
+.canaries { animation-delay: 180ms; }
+.doubt { animation-delay: 240ms; }
+.autopsy { animation-delay: 300ms; }
+
+.epi,
+.receipts,
+.canaries,
+.doubt,
+.autopsy {
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.epi:hover,
+.receipts:hover,
+.canaries:hover,
+.doubt:hover,
+.autopsy:hover {
+  border-color: color-mix(in srgb, var(--text-faint) 60%, var(--line));
+}
