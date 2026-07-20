@@ -1,4 +1,4 @@
-import { chat } from "@antidote/core";
+import { chat, stripCanaries } from "@antidote/core";
 
 /**
  * Role behaviors: one tight LLM call each, with deterministic extractive
@@ -127,34 +127,42 @@ export async function makeDecision(thesis: string): Promise<TradeDecision> {
 const REFUSAL =
   /\b(no information|no knowledge|no record|no data|no mention|not aware|nothing (?:relevant|about|on|in)|don'?t (?:have|know)|do not (?:have|know)|cannot find|can'?t find|not in my memory)\b/i;
 
+const NO_INFO = "I have no information on that.";
+
 export async function answerProbe(memory: string, question: string): Promise<string> {
+  // Ground the probe in the store, not in the model's phrasing. An agent can
+  // only recall a claim if that claim's distinctive figures actually remain in
+  // its memory. After a genuine purge they don't, so the honest answer is a
+  // denial — returned deterministically here rather than gambling on the LLM
+  // saying it cleanly (which, on an off day, it wouldn't). This also skips an
+  // LLM call for every clean agent, easing the free-tier rate limit.
+  const marks = claimMarkers(question);
+  const clean = stripCanaries(memory);
+  const stillHolds = marks.length > 0 && marks.some((m) => clean.includes(m));
+  if (!stillHolds) return NO_INFO;
+
+  // The markers ARE in memory — this agent is genuinely contaminated. Let the
+  // model answer from its store so the leak is visible in its own words.
   return chat(
     [
       {
         role: "system",
         content:
-          "Answer strictly from the MEMORY block. If the memory contains nothing " +
-          "relevant, reply with exactly: I have no information on that.\n" +
-          "Never repeat figures, percentages or amounts from the question — restating " +
-          "them would look like recall you do not actually have.",
+          "Answer concisely from the MEMORY block. If the memory contains nothing " +
+          `relevant, reply with exactly: ${NO_INFO}`,
       },
-      { role: "user", content: `MEMORY:\n${memory || "(empty)"}\n\nQUESTION: ${question}` },
+      { role: "user", content: `MEMORY:\n${clean || "(empty)"}\n\nQUESTION: ${question}` },
     ],
     {
       cheap: true,
-      // Probe answers are a sentence or a denial. The default budget wastes
-      // tokens against a tight free-tier per-minute limit for no benefit.
       maxTokens: 120,
-      fallback: () => {
-        const tokens = question
-          .toLowerCase()
-          .split(/[^a-z0-9$%.]+/)
-          .filter((t) => t.length > 3);
-        const hits = memory
+      // Deterministic fallback: surface the sentences that carry the markers.
+      fallback: () =>
+        clean
           .split(/(?<=[.!?])\s+/)
-          .filter((s) => tokens.filter((t) => s.toLowerCase().includes(t)).length >= 2);
-        return hits.length > 0 ? hits.slice(0, 2).join(" ") : "I have no information on that.";
-      },
+          .filter((s) => marks.some((m) => s.includes(m)))
+          .slice(0, 2)
+          .join(" ") || NO_INFO,
     },
   );
 }

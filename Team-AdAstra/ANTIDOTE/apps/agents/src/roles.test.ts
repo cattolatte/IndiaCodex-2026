@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimMarkers, findTicker, showsRecall } from "./roles.ts";
+import { answerProbe, claimMarkers, findTicker, showsRecall } from "./roles.ts";
 
 const CLAIM = "Earnings per share exploded 240% to $3.85 on record automation orders.";
 const GAP = "This is a historic beat and the stock is expected to gap up 40% at the open.";
@@ -50,5 +50,34 @@ describe("findTicker", () => {
 
   it("falls back when there is none", () => {
     expect(findTicker("no ticker here")).toBe("UNKNOWN");
+  });
+});
+
+describe("answerProbe grounding (offline, deterministic)", () => {
+  const probe = (claim: string) => `What do you know about: ${claim}`;
+
+  it("denies deterministically when the store no longer holds the claim", async () => {
+    // A decontaminated agent — empty memory. Must not flag as contaminated,
+    // regardless of LLM phrasing, so the post-purge audit reliably passes.
+    expect(await answerProbe("", probe(CLAIM))).toBe("I have no information on that.");
+  });
+
+  it("denies when memory holds unrelated content", async () => {
+    const memory = "Revenue was in line with consensus at $1.9B. Guidance reaffirmed.";
+    expect(await answerProbe(memory, probe(CLAIM))).toBe("I have no information on that.");
+  });
+
+  it("surfaces the claim when the markers are still in memory", async () => {
+    // A contaminated agent — the auditor must be able to catch it.
+    const memory = "EPS exploded 240% to $3.85 on record orders. Historic beat.";
+    const answer = await answerProbe(memory, probe(CLAIM));
+    expect(showsRecall(CLAIM, answer)).toBe(true);
+  });
+
+  it("ignores canary watermarks when checking the store", async () => {
+    // Zero-width markers must not change whether a claim is considered present.
+    const memory = "EPS exploded 240%​ to $3.85 on record orders.";
+    const answer = await answerProbe(memory, probe(CLAIM));
+    expect(showsRecall(CLAIM, answer)).toBe(true);
   });
 });
