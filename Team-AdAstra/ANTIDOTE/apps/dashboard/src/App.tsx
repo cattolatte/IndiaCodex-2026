@@ -161,6 +161,17 @@ interface ComparisonView {
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
+/**
+ * Escape untrusted text before it is interpolated into the graph tooltip's HTML.
+ * Node labels include user-uploaded source titles (see /api/upload), and
+ * react-force-graph renders `nodeLabel` as raw HTML — so an unescaped title would
+ * be stored XSS against every viewer polling the shared registry state.
+ */
+const escapeHtml = (s: string): string =>
+  s.replace(/[&<>"']/g, (c) =>
+    c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;",
+  );
+
 /** Compact relative time for the activity feed — "now", "12s", "4m", "2h". */
 function ago(at: number, now: number): string {
   const s = Math.max(0, Math.round((now - at) / 1000));
@@ -656,7 +667,7 @@ export function App() {
             nodeLabel={(node) => {
               const g = node as unknown as GraphNode;
               const kind = g.type === "agent" ? (g.role ?? "agent") : "source";
-              return `<div class="gtip"><strong>${g.label}</strong><span>${kind} · ${g.state}</span></div>`;
+              return `<div class="gtip"><strong>${escapeHtml(g.label)}</strong><span>${kind} · ${g.state}</span></div>`;
             }}
             nodeCanvasObject={(node, ctx, scale) => {
               const n = node as unknown as GraphNode & { x: number; y: number };
