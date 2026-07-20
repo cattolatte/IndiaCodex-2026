@@ -80,36 +80,45 @@ flowchart TB
    (does the agent still act on the poisoned fact?). Pass ⇒ attestation UTXO posts ⇒
    gate opens ⇒ transactions flow.
 
-## On-chain design sketch (roadmap)
+## On-chain enforcement (implemented)
 
-This build enforces quarantine at the Masumi payment/hiring layer — where the money
-already moves. The validator-level gate below is the designed next iteration:
+Quarantine is enforced at two layers that reinforce each other: at the Masumi
+payment/hiring layer — where the money already moves — **and** at consensus, by three
+Aiken Plutus V3 validators in [contracts/](../contracts/README.md). The validators
+compile (`plutus.json`), pass **14 tests** including the adversarial cases, and
+`packages/chain` loads the blueprint so the dashboard shows their real script hashes.
 
 - **Per-agent status UTXO**, not one global registry UTXO — avoids eUTXO contention and
-  makes the gate's reference-input lookup O(1).
-- Datums (sketch):
-  - `RecallDatum { source_hash, shard_root, severity, issuer_vkh, stake, issued_at }`
-  - `AgentStatusDatum { agent_id, status: Clean | Exposed { recall_ref } | Cleared { attestation_ref } }`
-  - `AttestationDatum { agent_id, recall_ref, auditor_vkh, probe_report_hash, cleared_at }`
-- **Quarantine gate**: a withdraw-zero / spending script composed into the agent's
-  payment flows; reads the agent's status UTXO as a reference input; fails unless status
-  is `Clean` or `Cleared` for every active recall matching the agent's exposure set.
-- Staking/slashing for recall issuers and auditors: V1 = locked deposit + manual slash
-  path; full dispute game is post-hackathon.
+  makes the gate's reference-input lookup O(1). See
+  [lib/antidote/types.ak](../contracts/lib/antidote/types.ak) for the exact shapes:
+  - `RecallDatum { source, shard_root, severity, issuer, stake_lovelace, issued_at }`
+  - `AgentStatusDatum { agent, status: Clean | Exposed { recall } | Cleared { recall, auditor }, manifest_root, updated_at }`
+  - `AttestationDatum { agent, recall, auditor, probe_report, manifest_root, cleared_at }`
+- **`quarantine_gate`**: composed into the agent's spending flow; reads the agent's
+  status UTXO as a reference input and permits the spend only when the status is `Clean`
+  or `Cleared`. A **missing** status reference input fails, so the gate cannot be
+  bypassed by omitting the evidence.
+- **`agent_status`**: `Flag` requires the recall issuer's signature; `Clear` requires an
+  auditor-signed attestation for the *same* recall and agent — another agent's clearance,
+  or an unsigned attestation, does not open the gate.
+- **`recall_registry`**: holds the issuer's locked stake; reclaiming it needs the
+  issuer's signature, which is the basis for slashing a false recall. A full automated
+  dispute game is post-hackathon.
 
 ## Repo layout
 
 ```
 ANTIDOTE/
 ├── docs/                  # you are here
-├── contracts/             # on-chain validator designs (roadmap)
+├── contracts/             # Aiken Plutus V3 validators (quarantine_gate, agent_status, recall_registry)
 ├── packages/
 │   ├── core/              # domain model: sources, shards, manifests, recalls, Merkle
+│   ├── masumi/            # Masumi registration + payments (live service or mock client)
 │   └── chain/             # Mesh tx builders + Blockfrost provider wiring
 └── apps/
     ├── registry/          # Hono API: gateway, recalls, exposure, contagion graph
     ├── agents/            # fleet (research/analysis/trading) + decontam + auditor
-    └── dashboard/         # Vite+React demo cockpit (contagion graph, split-screen)
+    └── dashboard/         # Vite+React control-room cockpit (contagion graph + live activity/payment feeds)
 ```
 
 `packages/core` is the contract between everything — all shard/manifest/recall types and
@@ -119,6 +128,6 @@ hashing live there and nowhere else.
 
 V1 scopes decontamination to RAG/memory stores — where deletion is real and provable —
 with weight-level unlearning as attested best-effort. Ingestion manifests are
-gateway-attested (the gateway writes them, not the agent). Enforcement runs at the
-Masumi payment/hiring layer; the validator-level gate and ZK decontamination proofs are
-the designed roadmap.
+gateway-attested (the gateway writes them, not the agent). Enforcement runs at both the
+Masumi payment/hiring layer and the Aiken quarantine gate; ZK decontamination proofs
+over the manifest root are the remaining roadmap item.

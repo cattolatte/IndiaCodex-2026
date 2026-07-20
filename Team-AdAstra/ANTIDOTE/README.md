@@ -115,7 +115,7 @@ dispute game · embedding-based similarity to complement exact-shard deletion.
 
 ## Beyond recall
 
-Three mechanisms that fall out of the primitives above and, as far as we know,
+Four mechanisms that fall out of the primitives above and, as far as we know,
 have not been built for agent fleets:
 
 **Immunisation.** A recall cures the agents that already ingested the poison. On
@@ -158,8 +158,9 @@ proposed extension to Masumi rather than as our private feature.
 **Masumi** registry + payment service (agents expose the MIP-003 service surface) ·
 TypeScript monorepo (pnpm workspaces) · **Hono** registry/gateway/contagion service ·
 free-tier **LLM** agents over any OpenAI-compatible endpoint (no vendor SDK) ·
-**Vite + React** cockpit with `react-force-graph` · **MeshJS** + Blockfrost for Cardano
-Preprod. Built and hosted on a strict **$0 budget** (free tiers only). Rationale and
+**Vite + React** cockpit with `react-force-graph` · **Aiken** (Plutus V3) validators ·
+**MeshJS** + Blockfrost for Cardano Preprod. Built and hosted on a strict **$0 budget**
+(free tiers only). Rationale and
 rejected alternatives: [docs/TECH-STACK.md](docs/TECH-STACK.md).
 
 ## Repository layout
@@ -168,11 +169,11 @@ rejected alternatives: [docs/TECH-STACK.md](docs/TECH-STACK.md).
 ANTIDOTE/
 ├── packages/core/       domain model: shards, manifests, recalls, Merkle, LLM client
 ├── packages/masumi/     Masumi registration + payments (live service or mock client)
-├── packages/chain/      Cardano/Mesh tx builders (roadmap surface)
+├── packages/chain/      Cardano/Mesh tx builders + compiled-blueprint loader (real script hashes, chain tip)
 ├── apps/registry/       gateway, recall engine, contagion resolution, paid hiring
 ├── apps/agents/         five MIP-003 agent services (fleet + immune system)
 ├── apps/dashboard/      contagion graph + activity/payment cockpit
-└── contracts/           on-chain validator designs (roadmap)
+└── contracts/           three Aiken Plutus V3 validators (+ 14 tests)
 ```
 
 ## Quick start
@@ -183,7 +184,7 @@ pnpm dev:registry           # :4100 — recall registry, gateway, contagion grap
 pnpm dev:agents             # :4300 — the five MIP-003 agent services
 pnpm dev:dashboard          # :4200 — cockpit UI
 
-pnpm test                   # 43 unit tests
+pnpm test                   # 54 unit tests
 pnpm typecheck
 cd contracts && aiken check # 14 validator tests
 ```
@@ -240,7 +241,7 @@ Or drive it manually:
 
 ## Tests
 
-57 tests in total, weighted towards the claims that would be embarrassing to get
+68 tests in total (54 unit + 14 on-chain), weighted towards the claims that would be embarrassing to get
 wrong: that immunity blocks a reworded forgery but **never** a legitimate
 correction; that exposure keys on an agent's current manifest so a decontaminated
 agent is not permanently marked; that damage is only attributed to a lie the agent
@@ -248,7 +249,7 @@ had actually read by then; and that the quarantine gate cannot be bypassed by
 omitting the evidence.
 
 ```bash
-pnpm test                     # 43 unit tests
+pnpm test                     # 54 unit tests
 cd contracts && aiken check   # 14 validator tests
 ```
 
@@ -265,8 +266,7 @@ The test suite pins the adversarial cases, not just the happy path.
 
 ## Submission info (IndiaCodex '26)
 
-<!-- Required by hackathon rules — fill before submitting -->
-
+- **Team:** AdAstra
 - **Track:** Masumi — Monetize AI Agents
 - **Project:** ANTIDOTE — epistemic recalls for agent fleets
 - **Problem it solves:** agents ingest continuously and act on what they ingest, so one
@@ -276,7 +276,13 @@ The test suite pins the adversarial cases, not just the happy path.
   verification a paid agent market.
 - **Tech stack:** see [Tech stack](#tech-stack) above and
   [docs/TECH-STACK.md](docs/TECH-STACK.md)
-- **Demo photos & video:** _TODO_
-- **Live project link:** _TODO_
+- **Live demo (dashboard):** https://antidote-adastra.vercel.app
+  — press **▶ Run full demo** for the unattended end-to-end run.
+- **Live services (deployed on free tier):**
+  - Registry / gateway / contagion API — https://antidote-registry.onrender.com
+  - Agent fleet + immune system (MIP-003) — https://antidote-agents.onrender.com
+  - _Note: the Render free tier sleeps when idle; the first request wakes it (a few
+    seconds), which the dashboard handles with a "waking" state and retry backoff._
+- **Demo photos & video:** _TODO — record against the live dashboard above_
 - **PPT:** _TODO — upload to this folder and link here_
 - **Team members:** _TODO — names, roles, contact_

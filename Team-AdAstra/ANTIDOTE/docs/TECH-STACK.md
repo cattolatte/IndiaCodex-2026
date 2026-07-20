@@ -10,10 +10,10 @@ is the core of the system, not an add-on.
 |---|---|---|
 | **Masumi (core)** | Preprod registry + self-hosted **payment service** (Docker); every agent speaks **MIP-003** | Agent identity, hiring, and payment. Decontamination and audit are *paid* Masumi services — the monetization story. A mock client with identical interface keeps local dev running without the service. |
 | Language | **TypeScript everywhere** | One toolchain for agents, registry, chain code, UI. MIP-003 is plain HTTP — nothing forces Python. |
-| Monorepo | **pnpm workspaces** | Five packages don't need a build graph. |
+| Monorepo | **pnpm workspaces** | Six workspaces (three packages, three apps) don't need a build graph. |
 | Agents | **Free-tier LLM** via OpenAI-compatible API (Groq primary, Gemini backup), plain `fetch`, no SDK | $0 budget rule. Fleet agents are one tight LLM call each; auditor probes use the small/fast model (many cheap calls). Provider swap is 4 env vars (`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_CHEAP`). MIP-003 endpoints wrap them. |
-| Smart contracts | **Aiken** (Plutus V3), Preprod — roadmap | This build enforces quarantine at the Masumi payment/hiring layer; the validator-level gate is designed in ARCHITECTURE.md as the next iteration. |
-| Off-chain tx | **MeshJS** (`@meshsdk/core`) + **Blockfrost** | Wallet/tx plumbing for Preprod payments and, on the roadmap, the Aiken blueprint. |
+| Smart contracts | **Aiken** (Plutus V3), Preprod — **implemented** | Three validators (`quarantine_gate`, `agent_status`, `recall_registry`) with 14 passing tests, including adversarial cases. Quarantine is enforced both at the Masumi payment/hiring layer and at consensus; `packages/chain` loads the compiled blueprint and the dashboard shows the real script hashes. See [contracts/README.md](../contracts/README.md). |
+| Off-chain tx | **MeshJS** (`@meshsdk/core`) + **Blockfrost** | Wallet/tx plumbing for Preprod payments and loading the compiled Aiken blueprint. With a Blockfrost key the dashboard reads the live chain tip; a funded wallet enables live Preprod submission, otherwise the gate is evaluated locally against the same compiled validators. |
 | Registry / API | **Hono** + in-memory stores | Demo infrastructure, not a product database; restart-fast for rehearsals. |
 | Contagion graph | In the registry service; LLM-scored semantic influence | Inference over ingestion events we already store — no graph DB. |
 | Dashboard | **Vite + React** | Fastest dev loop; graph viz via `react-force-graph`. Shows the Masumi payment feed alongside the contagion graph. |
@@ -66,4 +66,4 @@ If a dependency ever demands payment, we change the dependency, not the budget.
 
 - Node ≥ 22 (repo developed on 26.x), pnpm ≥ 9
 - Docker (Masumi payment service)
-- Aiken — `curl -sSfL https://install.aiken-lang.org | bash` then `aikup` (roadmap)
+- Aiken — `curl -sSfL https://install.aiken-lang.org | bash` then `aikup` (`cd contracts && aiken check`)
