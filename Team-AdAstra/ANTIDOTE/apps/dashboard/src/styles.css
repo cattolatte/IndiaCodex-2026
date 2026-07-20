@@ -1363,3 +1363,34 @@ kbd {
   color: var(--text-faint);
   margin-top: 2px;
 }
+
+/* --- global craft touches ------------------------------------------------ */
+
+::selection {
+  background: color-mix(in srgb, var(--system) 40%, transparent);
+  color: #fff;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+body::-webkit-scrollbar {
+  width: 11px;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+  border: 3px solid var(--bg);
+}
+
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Smooth anchored scrolling and a comfortable reading measure everywhere. */
+html {
+  scroll-behavior: smooth;
+}
