@@ -3,7 +3,7 @@ import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
 import { forceCollide, forceX, forceY } from "d3-force";
 import type { FeedEvent, GraphLink, GraphNode, GraphPayload } from "@antidote/core";
 import { apiGet, apiPost } from "./api.ts";
-import { CountUp, CountUpUsd, Flash, type FlashKind } from "./ui.tsx";
+import { CountUp, CountUpUsd, Flash, type FlashKind, StatusBand } from "./ui.tsx";
 
 interface AgentView {
   id: string;
@@ -465,6 +465,11 @@ export function App() {
           <span className="chip">recalls {status?.recalls ?? 0}</span>
         </div>
       </header>
+
+      <StatusBand
+        statuses={agents.map((a) => a.status.kind)}
+        immunised={(immunity?.antibodies.length ?? 0) > 0}
+      />
 
       {immunity && immunity.antibodies.length > 0 && (
         <div className="immunity">

@@ -1191,3 +1191,86 @@ kbd {
   padding: 1px 6px;
   color: var(--text-dim);
 }
+
+/* --- live system-status band ---------------------------------------------
+   A control-room threat level derived from live agent state. Re-mounts (via a
+   React key) on each level change, so the sweep animation replays each shift. */
+
+.status-band {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s3);
+  padding: 10px var(--s4);
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--lvl) 45%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--lvl) 16%, transparent) 0%, transparent 60%),
+    var(--surface-1);
+  position: relative;
+  overflow: hidden;
+  animation: band-sweep 900ms ease-out;
+}
+
+/* A light sweep travels across the band each time the level changes. */
+.status-band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--lvl) 22%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: band-shine 1200ms ease-out;
+}
+
+@keyframes band-sweep {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes band-shine {
+  to { transform: translateX(100%); }
+}
+
+.status-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--lvl);
+  box-shadow: 0 0 0 0 var(--lvl);
+  animation: pip 1.8s ease-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pip {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--lvl) 60%, transparent); }
+  70% { box-shadow: 0 0 0 11px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.status-label {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--lvl);
+}
+
+.status-detail {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-left: auto;
+  text-align: right;
+}
+
+@media (max-width: 620px) {
+  .status-detail { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-band, .status-band::after, .status-pip { animation: none; }
+}

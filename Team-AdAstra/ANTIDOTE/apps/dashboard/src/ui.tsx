@@ -122,3 +122,68 @@ export function Flash({ trigger }: { trigger: { kind: FlashKind; id: number } | 
 export function useBump(): [number, () => void] {
   return useReducer((n: number) => n + 1, 0);
 }
+
+/**
+ * The live operational state of the fleet, derived from agent statuses. It reads
+ * like a control-room threat level and shifts through the story — nominal,
+ * anomaly, outbreak, containment, immune — giving the whole page a pulse tied to
+ * what is actually happening.
+ */
+export type SystemLevel = "nominal" | "anomaly" | "outbreak" | "contained" | "immune";
+
+const LEVEL_META: Record<
+  SystemLevel,
+  { label: string; color: string; detail: (n: number) => string }
+> = {
+  nominal: {
+    label: "SYSTEM NOMINAL",
+    color: "#34d399",
+    detail: () => "all agents clean · no active recall",
+  },
+  anomaly: {
+    label: "ANOMALY FLAGGED",
+    color: "#fbbf24",
+    detail: (n) => `${n} agent${n === 1 ? "" : "s"} holding a suspected source`,
+  },
+  outbreak: {
+    label: "OUTBREAK — FLEET QUARANTINED",
+    color: "#f87171",
+    detail: (n) => `${n} agent${n === 1 ? "" : "s"} exposed · transactions blocked`,
+  },
+  contained: {
+    label: "CONTAINED — VERIFYING",
+    color: "#60a5fa",
+    detail: (n) => `${n} agent${n === 1 ? "" : "s"} decontaminated · attestations posting`,
+  },
+  immune: {
+    label: "IMMUNE — RESTORED",
+    color: "#34d399",
+    detail: () => "fleet cleared and vaccinated against the recalled lie",
+  },
+};
+
+export function deriveLevel(
+  statuses: string[],
+  immunised: boolean,
+): { level: SystemLevel; count: number } {
+  const exposed = statuses.filter((s) => s === "exposed").length;
+  const suspected = statuses.filter((s) => s === "suspected").length;
+  const cleared = statuses.filter((s) => s === "cleared").length;
+  if (exposed > 0) return { level: "outbreak", count: exposed };
+  if (suspected > 0) return { level: "anomaly", count: suspected };
+  if (cleared > 0) return { level: immunised ? "immune" : "contained", count: cleared };
+  return { level: "nominal", count: 0 };
+}
+
+export function StatusBand({ statuses, immunised }: { statuses: string[]; immunised: boolean }) {
+  const { level, count } = deriveLevel(statuses, immunised);
+  const meta = LEVEL_META[level];
+  return (
+    // Keyed on level so it re-animates each time the operational state shifts.
+    <div className={`status-band level-${level}`} key={level} style={{ ["--lvl" as string]: meta.color }}>
+      <span className="status-pip" />
+      <span className="status-label">{meta.label}</span>
+      <span className="status-detail">{meta.detail(count)}</span>
+    </div>
+  );
+}
