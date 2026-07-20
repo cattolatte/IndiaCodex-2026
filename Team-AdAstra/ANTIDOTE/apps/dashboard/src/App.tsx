@@ -4,6 +4,7 @@ import { forceCollide, forceX, forceY } from "d3-force";
 import type { FeedEvent, GraphLink, GraphNode, GraphPayload } from "@antidote/core";
 import { apiGet, apiPost } from "./api.ts";
 import { CountUp, CountUpUsd, Flash, type FlashKind, StatusBand } from "./ui.tsx";
+import { escapeHtml } from "./format.ts";
 
 interface AgentView {
   id: string;
@@ -160,17 +161,6 @@ interface ComparisonView {
 }
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
-
-/**
- * Escape untrusted text before it is interpolated into the graph tooltip's HTML.
- * Node labels include user-uploaded source titles (see /api/upload), and
- * react-force-graph renders `nodeLabel` as raw HTML — so an unescaped title would
- * be stored XSS against every viewer polling the shared registry state.
- */
-const escapeHtml = (s: string): string =>
-  s.replace(/[&<>"']/g, (c) =>
-    c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;",
-  );
 
 /** Compact relative time for the activity feed — "now", "12s", "4m", "2h". */
 function ago(at: number, now: number): string {

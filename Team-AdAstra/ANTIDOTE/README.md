@@ -186,7 +186,7 @@ pnpm dev:registry           # :4100 — recall registry, gateway, contagion grap
 pnpm dev:agents             # :4300 — the five MIP-003 agent services
 pnpm dev:dashboard          # :4200 — cockpit UI
 
-pnpm test                   # 65 unit tests
+pnpm test                   # 68 unit tests
 pnpm test:e2e               # full offline autopilot: 17/17 beats, 0 failures
 pnpm typecheck
 cd contracts && aiken check # 14 validator tests
@@ -245,7 +245,7 @@ Or drive it manually:
 
 ## Tests
 
-79 tests in total (65 unit + 14 on-chain), weighted towards the claims that would be embarrassing to get
+82 tests in total (68 unit + 14 on-chain), weighted towards the claims that would be embarrassing to get
 wrong: that immunity blocks a reworded forgery but **never** a legitimate
 correction; that exposure keys on an agent's current manifest so a decontaminated
 agent is not permanently marked; that damage is only attributed to a lie the agent
@@ -253,7 +253,7 @@ had actually read by then; and that the quarantine gate cannot be bypassed by
 omitting the evidence.
 
 ```bash
-pnpm test                     # 65 unit tests
+pnpm test                     # 68 unit tests
 pnpm test:e2e                 # boots both services offline, runs the autopilot,
                               # fails unless all 17 beats complete with 0 failures
 cd contracts && aiken check   # 14 validator tests
