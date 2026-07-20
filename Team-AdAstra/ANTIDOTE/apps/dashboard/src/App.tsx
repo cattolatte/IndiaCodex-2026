@@ -923,6 +923,21 @@ export function App() {
           Upload to feed
         </button>
       </details>
+
+      <footer className="site-foot">
+        <span className="foot-mark">ANTIDOTE</span>
+        <span className="foot-tag">the public-health system for the machine economy</span>
+        <span className="foot-stack">
+          {["Cardano Preprod", "Masumi", "Aiken · Plutus V3", "MIP-003 agents", "Groq + Gemini"].map(
+            (s) => (
+              <span key={s} className="foot-badge">
+                {s}
+              </span>
+            ),
+          )}
+        </span>
+        <span className="foot-team">Team AdAstra · IndiaCodex ’26</span>
+      </footer>
     </div>
   );
 }
