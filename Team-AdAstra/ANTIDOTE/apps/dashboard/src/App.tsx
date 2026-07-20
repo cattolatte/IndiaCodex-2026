@@ -161,6 +161,15 @@ interface ComparisonView {
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
+/** Compact relative time for the activity feed — "now", "12s", "4m", "2h". */
+function ago(at: number, now: number): string {
+  const s = Math.max(0, Math.round((now - at) / 1000));
+  if (s < 3) return "now";
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  return `${Math.floor(s / 3600)}h`;
+}
+
 export function App() {
   const [graph, setGraph] = useState<GraphPayload>({ nodes: [], links: [] });
   const [events, setEvents] = useState<FeedEvent[]>([]);
@@ -176,6 +185,13 @@ export function App() {
   const [epi, setEpi] = useState<EpiView | null>(null);
   const [receipts, setReceipts] = useState<ReceiptView[]>([]);
   const [offline, setOffline] = useState(false);
+  // A once-a-second clock so the activity feed's relative times stay current
+  // without re-fetching. Cheap: one setState per second.
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
   // The most visceral beats get a full-screen flash. Keyed on the triggering
   // event id so each new occurrence fires exactly once.
   const [flash, setFlash] = useState<{ kind: FlashKind; id: number } | null>(null);
@@ -743,13 +759,21 @@ export function App() {
         </div>
 
         <div className="feed">
-          <h2>Activity</h2>
+          <h2>
+            Activity
+            <span className="feed-count">{events.length}</span>
+          </h2>
           <ul>
             {[...events].reverse().map((ev) => (
               <li key={ev.id} className={`ev ev-${ev.kind}`}>
                 <span className="icon">{EVENT_ICONS[ev.kind]}</span>
-                <span className="msg">{ev.message}</span>
-                {ev.txRef && <code className="tx">{ev.txRef.slice(0, 18)}…</code>}
+                <span className="msg">
+                  {ev.message}
+                  {ev.txRef && <code className="tx">{ev.txRef.slice(0, 16)}…</code>}
+                </span>
+                <time className="ev-time" dateTime={new Date(ev.at).toISOString()}>
+                  {ago(ev.at, now)}
+                </time>
               </li>
             ))}
           </ul>
