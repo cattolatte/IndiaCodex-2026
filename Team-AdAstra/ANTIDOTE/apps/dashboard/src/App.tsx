@@ -528,7 +528,9 @@ export function App() {
           <span className="beat">
             {auto.running ? `${auto.beat}/${auto.total}` : auto.failures > 0 ? "!" : "✓"}
           </span>
-          <p>{auto.say}</p>
+          {/* Keyed on the beat so each new line animates in as it changes —
+              turning the banner into the demo's running voiceover. */}
+          <p key={auto.beat}>{auto.say}</p>
         </div>
       )}
 
