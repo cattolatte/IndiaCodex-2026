@@ -19,6 +19,14 @@ export function useCountUp(target: number, durationMs = 900): number {
   useEffect(() => {
     // Nothing to animate; avoid scheduling a frame for a no-op.
     if (target === value) return;
+    // Honour reduced-motion — snap straight to the value.
+    if (
+      typeof matchMedia !== "undefined" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setValue(target);
+      return;
+    }
     fromRef.current = value;
     startRef.current = performance.now();
 
