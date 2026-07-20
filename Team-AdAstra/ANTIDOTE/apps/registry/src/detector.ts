@@ -47,7 +47,7 @@ const SIGNALS: Signal[] = [
   },
 ];
 
-function heuristicScore(content: string): { score: number; reasons: string[] } {
+export function heuristicScore(content: string): { score: number; reasons: string[] } {
   let score = 0;
   const reasons: string[] = [];
   for (const s of SIGNALS) {
