@@ -673,6 +673,9 @@ export function App() {
               (l as { kind?: string }).kind === "output" ? "#a5b4fc" : "#475569"
             }
             cooldownTicks={140}
+            // Pre-run the simulation off-screen so the graph appears already
+            // laid out instead of flinging nodes from the centre on every load.
+            warmupTicks={80}
             d3VelocityDecay={0.28}
             minZoom={0.5}
             maxZoom={6}
