@@ -641,6 +641,12 @@ export function App() {
             Contagion graph
             <span>agents · sources · derived outputs</span>
           </div>
+          {graph.links.length === 0 && !autopilotRunning && (
+            <div className="graph-hint">
+              Nothing has flowed yet. Run the demo to watch a forged source enter the feed
+              and spread through the agents.
+            </div>
+          )}
           <ForceGraph2D
             ref={fgRef}
             // Re-frame once the simulation settles, otherwise the cluster drifts

@@ -1481,3 +1481,23 @@ html {
   font-size: 10.5px;
   color: var(--text-faint);
 }
+
+/* --- graph idle hint ----------------------------------------------------- */
+
+.graph-hint {
+  position: absolute;
+  bottom: var(--s4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  max-width: 300px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-faint);
+  pointer-events: none;
+  background: color-mix(in srgb, var(--surface-1) 80%, transparent);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-soft);
+}

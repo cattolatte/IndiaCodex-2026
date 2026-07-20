@@ -809,6 +809,11 @@ app.get("/api/state", async (c) => {
 app.post("/api/seed", async (c) => {
   reset();
   resetClone();
+  // Clear the autopilot banner on a manual re-seed, but not when the autopilot
+  // itself is seeding as its first beat (that would wipe its own progress).
+  if (!db.autopilot.running) {
+    db.autopilot = { running: false, beat: 0, total: 0, say: "", failures: 0 };
+  }
   logEvent("info", "Demo state seeded — clean feed online");
   for (const doc of CLEAN_FEED) {
     const shards = shardify(doc.content);
