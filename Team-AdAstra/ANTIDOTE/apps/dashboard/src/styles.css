@@ -1421,3 +1421,27 @@ html {
 .autopsy:hover {
   border-color: color-mix(in srgb, var(--text-faint) 60%, var(--line));
 }
+
+/* --- copyable hash ------------------------------------------------------- */
+
+.copyable {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 1px 4px;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.copyable:hover {
+  background: var(--surface-3);
+  color: var(--text-dim);
+}
+
+.copyable.copied {
+  color: var(--clean);
+  background: color-mix(in srgb, var(--clean) 16%, transparent);
+}
+
+.copyable.copied::after {
+  content: " ✓ copied";
+  font-size: 10px;
+}

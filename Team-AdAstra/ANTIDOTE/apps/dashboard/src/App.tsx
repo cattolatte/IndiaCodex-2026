@@ -365,6 +365,33 @@ export function App() {
     }
   };
 
+  // Real Plutus script hashes are worth copying — a judge can verify them on a
+  // Cardano explorer. Uses the async Clipboard API where available and falls
+  // back to execCommand; either way it shows the confirmation and never throws.
+  const copyHash = (el: HTMLElement, value: string) => {
+    const done = () => {
+      el.classList.add("copied");
+      setTimeout(() => el.classList.remove("copied"), 1100);
+    };
+    try {
+      if (navigator.clipboard?.writeText) {
+        void navigator.clipboard.writeText(value).then(done, done);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = value;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        done();
+      }
+    } catch {
+      done();
+    }
+  };
+
   const controls: { label: string; path: string; body?: unknown; danger?: boolean }[] = [
     { label: "Seed feed", path: "/api/seed" },
     { label: "Run pipeline", path: "/api/tick" },
@@ -494,8 +521,15 @@ export function App() {
         <div className="validators">
           <span className="vlabel">Plutus {chain.plutusVersion} validators enforcing quarantine:</span>
           {chain.validators.map((v) => (
-            <span key={v.name} className="validator" title={v.hash}>
-              {v.name} <code>{v.hash.slice(0, 12)}…</code>
+            <span key={v.name} className="validator">
+              {v.name}{" "}
+              <code
+                className="copyable"
+                title={`${v.hash} — click to copy`}
+                onClick={(e) => copyHash(e.currentTarget, v.hash)}
+              >
+                {v.hash.slice(0, 12)}…
+              </code>
             </span>
           ))}
         </div>
