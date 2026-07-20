@@ -46,7 +46,7 @@ export const SCRIPT: Beat[] = [
     hold: 3000,
   },
   {
-    say: "Watch the lie spread: research summarises it, analysis builds a thesis on that summary, and the trader sizes a $2.5M position on a forgery.",
+    say: "Watch the lie spread: research summarises it, analysis builds a thesis on that summary, and the trader sizes a multi-million-dollar position on a forgery.",
     path: "/api/tick",
     hold: 3000,
   },

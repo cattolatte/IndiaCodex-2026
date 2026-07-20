@@ -223,7 +223,7 @@ Or drive it manually:
 4. **Run detector** — scores it for forgery signals and marks any holder
    **SUSPECTED** (amber) — advisory, nothing is blocked yet.
 5. **Run pipeline** — watch the lie propagate node-by-node through the contagion
-   graph until the trader sizes a **$2.5M BUY** on the forgery.
+   graph until the trader sizes a **multi-million-dollar BUY** on the forgery.
 6. **Issue recall** — staked recall against the forged source; exposure resolves
    through the gateway-attested manifests: research (direct), analysis and trading
    (transitive, via each other's outputs). All three are quarantined.
