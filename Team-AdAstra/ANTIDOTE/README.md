@@ -86,9 +86,11 @@ metrics (R₀, attack rate, containment) · live contagion-graph cockpit · one-
 narrated autopilot.
 
 Masumi registration and payment run through the payment service when configured, and
-through an interface-identical mock client otherwise; likewise Cardano submission runs
-live with a Blockfrost key and simulated (same validator logic, real compiled hashes)
-without one.
+through an interface-identical mock client otherwise. On Cardano, a Blockfrost key adds a
+live, read-only Preprod chain tip; the quarantine gate is evaluated against the real
+compiled validators (same logic, real script hashes) in `simulated` mode. Live
+transaction submission is the one remaining on-chain step — deliberately gated off so the
+UI never claims a transaction hit the chain when it did not.
 
 **Roadmap:** ZK proofs of decontamination over the manifest root (the receipts above are
 exactly the statement a ZK verifier would attest, so the interface does not change) ·

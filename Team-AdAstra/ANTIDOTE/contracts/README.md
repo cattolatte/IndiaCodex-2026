@@ -36,5 +36,9 @@ See [lib/antidote/types.ak](lib/antidote/types.ak): `RecallDatum`, `AgentStatusD
 (`Clean | Exposed | Cleared`), `AttestationDatum`.
 
 `packages/chain` loads the compiled blueprint and reports the real script hashes; the
-dashboard displays them. With `BLOCKFROST_PROJECT_ID_PREPROD` set and funded wallets,
-the same path submits live Preprod transactions.
+dashboard displays them and evaluates the quarantine gate against them (mode
+`simulated`). With `BLOCKFROST_PROJECT_ID_PREPROD` set the dashboard also shows the
+live, read-only Preprod chain tip. Live transaction submission (signing and submitting a
+real tx the validator then evaluates) is the one remaining on-chain step — intentionally
+gated off behind `LIVE_SUBMISSION` in `packages/chain` so nothing reports "live" until it
+actually is.
