@@ -521,11 +521,20 @@ app.post("/api/attestations", async (c) => {
       (body.passed ? "verified ignorance — PASSED" : "still contaminated — FAILED"),
     { agent: agent.id },
   );
-  if (body.passed) {
+  // Mirror the on-chain agent_status validator's Clear rule: an agent can be
+  // cleared only when it is currently exposed under *this* recall, and only by a
+  // passing attestation. A pass for the wrong recall, or for an agent that isn't
+  // exposed, does not open the gate — the same adversarial cases the Aiken suite
+  // pins, so the off-chain path can't be more permissive than the validator.
+  const clears =
+    body.passed &&
+    agent.status.kind === "exposed" &&
+    agent.status.recallId === body.recallId;
+  if (clears) {
     agent.status = { kind: "cleared", recallId: body.recallId, attestationId: attestation.id };
     logEvent("cleared", `${agent.name} CLEARED — transactable again`, { agent: agent.id });
   }
-  return c.json({ attestation });
+  return c.json({ attestation, cleared: clears });
 });
 
 /** Agents may append feed events (probe narration etc.). */
