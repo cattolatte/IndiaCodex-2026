@@ -1,9 +1,14 @@
 # Demo assets
 
-Drop screenshots / recordings here, then reference them from the top-level README.md (Section 5).
+Screenshots of the live ANTIDOTE dashboard, walking the full demo story
+(referenced from the top-level README.md, Section 5):
 
-Suggested files (referenced by the README placeholders):
-- `dashboard.png` — the live contagion-graph cockpit
-- `gate-rejection.png` — the quarantine gate rejecting a spend
-- `immune-restored.png` — the demo ending in IMMUNE — RESTORED
-- `demo.mp4` / a video link — the full ~90s autopilot run
+- `01-dashboard-nominal.jpg` — the cockpit at rest (SYSTEM NOMINAL)
+- `02-clean-fleet.jpg` — clean fleet + contagion graph legend
+- `03-outbreak-quarantine.jpg` — agents exposed & quarantined; doubt paid over Masumi
+- `04-immune-restored.jpg` — cleared + reworded re-infection refused
+- `05-contagion-graph.jpg` — the contagion graph close-up
+- `06-evidence-metrics.jpg` — loss comparison, epidemiology, purge receipts
+- `07-autopsy-doubt.jpg` — epistemic autopsy + doubt market
+
+**Demo video:** drop a recording here as `demo.mp4` (or link it from the README).

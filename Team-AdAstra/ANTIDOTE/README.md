@@ -76,19 +76,30 @@ Crucially, this is **not a provenance problem**. Provenance answers *"where did 
 
 ## 5. Project Demo Photos, Videos
 
-<!-- Add your screenshots/recordings to the assets/ folder, then they'll show up here.
-     Suggested filenames are referenced below — drop matching images into assets/. -->
+**The control-room cockpit — SYSTEM NOMINAL.** Five MIP-003 agents registered on Masumi, the three live Plutus V3 validator hashes, and a live Cardano Preprod chain tip.
+![ANTIDOTE dashboard — system nominal](assets/01-dashboard-nominal.jpg)
 
-![ANTIDOTE dashboard — the live contagion cockpit](assets/dashboard.png)
-*The control-room: contagion graph, agent statuses, and the live activity + Masumi payment feeds.*
+**A clean fleet on honest news.** All agents green; the contagion graph before anything has spread.
+![Clean fleet and contagion graph](assets/02-clean-fleet.jpg)
 
-![Quarantine gate rejects the spend](assets/gate-rejection.png)
-*A quarantined agent's transaction is refused by the `quarantine_gate` validator's own logic.*
+**Outbreak — the fleet is quarantined.** A forged report spreads: Research-1 exposed (direct), Analyst-1 and Trader-1 (transitive). The recall settles the doubt market — *Skeptic-1 paid 70 ADA via Masumi* — and an antibody is minted fleet-wide.
+![Outbreak — agents exposed and quarantined](assets/03-outbreak-quarantine.jpg)
 
-![IMMUNE — RESTORED](assets/immune-restored.png)
-*The full run ends with the fleet cleared and vaccinated against the recalled lie.*
+**IMMUNE — RESTORED.** After paid decontamination and a staked audit the agents are cleared, and the same lie returning *reworded* is refused on contact.
+![Immune — re-infection refused](assets/04-immune-restored.jpg)
 
-**Demo video:** _add a link (YouTube / Drive) or drop a recording at `assets/demo.mp4`_
+**The contagion graph.** Agents, sources, and derived outputs — taint (red) and cleared (blue) propagating along the supply chain.
+![Contagion graph close-up](assets/05-contagion-graph.jpg)
+
+**The evidence, quantified.** Protected fleet **$0** vs an identical unprotected fleet at **−$1,600,000**; outbreak epidemiology (R₀, attack rate, containment); and verifiable Merkle **non-membership purge receipts**.
+![Evidence — loss comparison, epidemiology, purge receipts](assets/06-evidence-metrics.jpg)
+
+**Beyond recall.** The **epistemic autopsy** ($1.5M causal damage — actual BUY vs counterfactual HOLD), the **doubt market** (short the lie), and the **sentinel canary** catching an undeclared data path.
+![Epistemic autopsy and doubt market](assets/07-autopsy-doubt.jpg)
+
+**Demo video:** _add a link (YouTube / Drive) here, or drop a recording at `assets/demo.mp4`._ <!-- TODO: record the ~90s autopilot run against the live site and link it here -->
+
+> The best "photo" is live — press **▶ Run full demo** on the [live site](https://antidote-adastra.vercel.app/) and the whole story runs in ~90 seconds.
 
 ---
 
