@@ -97,7 +97,7 @@ Crucially, this is **not a provenance problem**. Provenance answers *"where did 
 **Beyond recall.** The **epistemic autopsy** ($1.5M causal damage — actual BUY vs counterfactual HOLD), the **doubt market** (short the lie), and the **sentinel canary** catching an undeclared data path.
 ![Epistemic autopsy and doubt market](assets/07-autopsy-doubt.jpg)
 
-**Demo video:** _add a link (YouTube / Drive) here, or drop a recording at `assets/demo.mp4`._ <!-- TODO: record the ~90s autopilot run against the live site and link it here -->
+**Demo video:** _(Coming soon: a screen recording of the full ~90s autopilot demo will be added here.)_
 
 > The best "photo" is live — press **▶ Run full demo** on the [live site](https://antidote-adastra.vercel.app/) and the whole story runs in ~90 seconds.
 
